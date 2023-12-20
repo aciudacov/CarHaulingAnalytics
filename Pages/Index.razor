@@ -1,0 +1,181 @@
+﻿@using CarHaulingAnalytics.Data.Enums
+@using EnumsNET
+@inherits IndexRazor
+
+@page "/"
+
+<PageTitle>Overview</PageTitle>
+<style>
+    .rz-chart-tooltip {
+        z-index: 1000;
+    }
+</style>
+<RadzenPanel AllowCollapse="true" Collapsed="true" Class="rz-mx-auto" Style="width: 700px; position: fixed; z-index: 400; right: 0;">
+    <HeaderTemplate>
+        <RadzenText TextStyle="TextStyle.H6" Class="rz-display-flex rz-align-items-center rz-m-0">
+            <RadzenIcon Icon="filter_alt" class="rz-mr-1" /><b>Order filters</b>
+        </RadzenText>
+    </HeaderTemplate>
+    <ChildContent>
+        <RadzenCard  class="rz-mt-4">
+            @if (!FilterValue.Date.HasValue)
+            {
+                <h5>@TotalOrders orders (last updated at @DatePickerDates.endDate UTC)</h5>
+            }
+            else
+            {
+                <h5>@TotalOrders orders for @FilterValue.Date.Value.ToString("dd/MM/yyyy")</h5>
+            }
+
+            <RadzenRow Class="mb-3">
+                <RadzenColumn Size="4">
+                    <h4>Date filter</h4>
+                    <RadzenDatePicker @bind-Value="@FilterValue.Date" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" MouseEnter="@(DatePickerTooltip)" AllowInput="false" Placeholder="All dates" />
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow Class="mb-3">
+                <RadzenColumn Size="12">
+                    <h4>Price filter (from $@FilterValue.PriceLimits.Min() to $@FilterValue.PriceLimits.Max())</h4>
+                    <RadzenSlider Range="true" @bind-Value="@FilterValue.PriceLimits" TValue="IEnumerable<int>" Min="300" Max="7000" Step="10" Class="w-100" />
+                </RadzenColumn>
+    
+            </RadzenRow>
+            <RadzenRow Class="mb-3">
+                <RadzenColumn Size="12">
+                    <h4>Range filter (from @FilterValue.RangeLimits.Min()mi to @FilterValue.RangeLimits.Max()mi)</h4>
+                    <RadzenSlider Range="true" @bind-Value="@FilterValue.RangeLimits" TValue="IEnumerable<int>" Min="0" Max="5000" Step="10" Class="w-100" />
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow Class="mb-3">
+                <RadzenRow>
+                    <RadzenColumn>
+                        <h4>Trailer type filter</h4>
+                        <RadzenDropDown TValue="TrailerTypes?" @bind-Value="@FilterValue.TrailerType" Data="@(Enum.GetValues<TrailerTypes>())" AllowClear="true" Placeholder="Any trailer"/>
+                    </RadzenColumn>
+                    <RadzenColumn>
+                        <h4>Excluded states</h4>
+                        <RadzenDropDown TValue="List<Data.Enums.States>" @bind-Value="@FilterValue.ExcludedStates" Data="@(Enum.GetValues<Data.Enums.States>().Where(s => s != Data.Enums.States.Canada))" AllowClear="true" Multiple="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                        <br />
+                        <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludePickup" Name="PickupCheckbox" />
+                        <RadzenLabel Text="Exclude from pickup" Component="PickupCheckbox"/>
+                        <br/>
+                        <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludeDelivery" Name="DeliveryCheckbox" />
+                        <RadzenLabel Text="Exclude from delivery" Component="DeliveryCheckbox" />
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenRow>
+            <RadzenRow>
+                <RadzenColumn Size="5">
+                    <RadzenButton Text="Apply filter" Click="FilterChanged" IsBusy="@DatePickerDisabled"/>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
+    </ChildContent>
+    <SummaryTemplate>
+        <RadzenCard class="rz-mt-4">
+            <b>Filters: $@FilterValue.PriceLimits.Min() - $@FilterValue.PriceLimits.Max(), @FilterValue.RangeLimits.Min()mi - @FilterValue.RangeLimits.Max()mi</b>
+            @if (FilterValue.TrailerType.HasValue)
+            {
+                <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
+            }
+            @if (FilterValue.Date.HasValue)
+            {
+                <b>, @FilterValue.Date.Value.ToString("dd/MM/yyyy") data</b>
+            }
+            @if (FilterValue.ExcludedStates is { Count: > 0})
+            {
+                <b>, @FilterValue.ExcludedStates.Count excluded state(s)</b>
+            }
+        </RadzenCard>
+    </SummaryTemplate>
+</RadzenPanel>
+
+<br/>
+<h2>Count by pickup state</h2>
+
+<RadzenChart ColorScheme="ColorScheme.Pastel">
+    <RadzenColumnSeries Data="@PickupOrdersCount" Title="Ordes" CategoryProperty="Value" ValueProperty="Count">
+        <TooltipTemplate Context="data">
+            <div style="z-index: 999">
+                <b>@data.Value</b>
+                <br/>
+                <strong>@data.Count</strong>
+                <br/>
+                <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
+            </div>
+        </TooltipTemplate>
+    </RadzenColumnSeries>
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<h2>Count by delivery state</h2>
+
+<RadzenChart ColorScheme="ColorScheme.Pastel">
+    <RadzenColumnSeries Data="@DeliveryOrdersCount" Title="Orders" CategoryProperty="Value" ValueProperty="Count">
+        <TooltipTemplate Context="data">
+            <b>@data.Value</b>
+            <br />
+            <strong>@data.Count</strong>
+            <br />
+            <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
+        </TooltipTemplate>
+    </RadzenColumnSeries>
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<h2>Popular routes (top 20)</h2>
+
+<RadzenChart ColorScheme="ColorScheme.Pastel">
+    <RadzenColumnSeries Data="@PopularRoutes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<h2>Average price by pickup state</h2>
+
+<RadzenChart>
+    <RadzenColumnSeries Data="@AveragePrices" Title="Average price ($)" CategoryProperty="State" ValueProperty="AveragePrice"/>
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<h2>Average price per mile by pickup state</h2>
+
+<RadzenChart>
+    <RadzenColumnSeries Data="@AveragePricesPerMile" Title="Average price per mile ($)" CategoryProperty="State" ValueProperty="AveragePrice" />
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<h2>Top shippers by order count (top 10)</h2>
+
+<RadzenChart ColorScheme="ColorScheme.Pastel">
+    <RadzenBarSeries Data="@ShipperOrders" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+    <RadzenLegend Visible="false" />
+</RadzenChart>
+
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn>
+        <h2>Orders by payment type</h2>
+
+        <RadzenChart>
+            <RadzenPieSeries Data="@PaymentTypesCount" Title="Payment type count" CategoryProperty="Value" ValueProperty="Count" />
+            <RadzenLegend Visible="true" />
+        </RadzenChart>
+    </RadzenColumn>
+    <RadzenColumn>
+        <h2>Order count by vehicle status</h2>
+
+        <RadzenChart>
+            <RadzenPieSeries Data="@VehicleStatus" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+            <RadzenLegend Visible="true" />
+        </RadzenChart>
+    </RadzenColumn>
+    <RadzenColumn>
+        <h2>Order count by trailer type</h2>
+
+        <RadzenChart>
+            <RadzenPieSeries Data="@TrailerTypes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+            <RadzenLegend Visible="true" />
+        </RadzenChart>
+    </RadzenColumn>
+</RadzenRow>
+
+
