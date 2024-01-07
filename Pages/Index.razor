@@ -93,88 +93,151 @@
 <br/>
 <h2>Count by pickup state</h2>
 
-<RadzenChart ColorScheme="ColorScheme.Pastel">
-    <RadzenColumnSeries Data="@PickupOrdersCount" Title="Ordes" CategoryProperty="Value" ValueProperty="Count">
-        <TooltipTemplate Context="data">
-            <div style="z-index: 999">
-                <b>@data.Value</b>
-                <br/>
-                <strong>@data.Count</strong>
-                <br/>
-                <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
-            </div>
-        </TooltipTemplate>
-    </RadzenColumnSeries>
-    <RadzenLegend Visible="false" />
-</RadzenChart>
-
+@if (!PickupOrdersCount.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart ColorScheme="ColorScheme.Pastel">
+        <RadzenColumnSeries Data="@PickupOrdersCount" Title="Ordes" CategoryProperty="Value" ValueProperty="Count">
+            <TooltipTemplate Context="data">
+                <div style="z-index: 999">
+                    <b>@data.Value</b>
+                    <br/>
+                    <strong>@data.Count</strong>
+                    <br/>
+                    <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
+                </div>
+            </TooltipTemplate>
+        </RadzenColumnSeries>
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
 <h2>Count by delivery state</h2>
 
-<RadzenChart ColorScheme="ColorScheme.Pastel">
-    <RadzenColumnSeries Data="@DeliveryOrdersCount" Title="Orders" CategoryProperty="Value" ValueProperty="Count">
-        <TooltipTemplate Context="data">
-            <b>@data.Value</b>
-            <br />
-            <strong>@data.Count</strong>
-            <br />
-            <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
-        </TooltipTemplate>
-    </RadzenColumnSeries>
-    <RadzenLegend Visible="false" />
-</RadzenChart>
+@if (!DeliveryOrdersCount.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart ColorScheme="ColorScheme.Pastel">
+        <RadzenColumnSeries Data="@DeliveryOrdersCount" Title="Orders" CategoryProperty="Value" ValueProperty="Count">
+            <TooltipTemplate Context="data">
+                <b>@data.Value</b>
+                <br />
+                <strong>@data.Count</strong>
+                <br />
+                <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
+            </TooltipTemplate>
+        </RadzenColumnSeries>
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
 
 <h2>Popular routes (top 20)</h2>
 
-<RadzenChart ColorScheme="ColorScheme.Pastel">
-    <RadzenColumnSeries Data="@PopularRoutes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-    <RadzenLegend Visible="false" />
-</RadzenChart>
+@if (!PopularRoutes.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart ColorScheme="ColorScheme.Pastel">
+        <RadzenColumnSeries Data="@PopularRoutes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
 
 <h2>Average price by pickup state</h2>
 
-<RadzenChart>
-    <RadzenColumnSeries Data="@AveragePrices" Title="Average price ($)" CategoryProperty="State" ValueProperty="AveragePrice"/>
-    <RadzenLegend Visible="false" />
-</RadzenChart>
+@if (!AveragePrices.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart>
+        <RadzenColumnSeries Data="@AveragePrices" Title="Average price ($)" CategoryProperty="State" ValueProperty="AveragePrice"/>
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
 
 <h2>Average price per mile by pickup state</h2>
 
-<RadzenChart>
-    <RadzenColumnSeries Data="@AveragePricesPerMile" Title="Average price per mile ($)" CategoryProperty="State" ValueProperty="AveragePrice" />
-    <RadzenLegend Visible="false" />
-</RadzenChart>
+@if (!AveragePricesPerMile.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart>
+        <RadzenColumnSeries Data="@AveragePricesPerMile" Title="Average price per mile ($)" CategoryProperty="State" ValueProperty="AveragePrice" />
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
 
 <h2>Top shippers by order count (top 10)</h2>
 
-<RadzenChart ColorScheme="ColorScheme.Pastel">
-    <RadzenBarSeries Data="@ShipperOrders" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-    <RadzenLegend Visible="false" />
-</RadzenChart>
+@if (!ShipperOrders.Any())
+{
+    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+}
+else
+{
+    <RadzenChart ColorScheme="ColorScheme.Pastel">
+        <RadzenBarSeries Data="@ShipperOrders" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
+
 
 <RadzenRow AlignItems="AlignItems.Center">
     <RadzenColumn>
         <h2>Orders by payment type</h2>
-
-        <RadzenChart>
-            <RadzenPieSeries Data="@PaymentTypesCount" Title="Payment type count" CategoryProperty="Value" ValueProperty="Count" />
-            <RadzenLegend Visible="true" />
-        </RadzenChart>
+        
+        @if (!PaymentTypesCount.Any())
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <RadzenChart>
+                <RadzenPieSeries Data="@PaymentTypesCount" Title="Payment type count" CategoryProperty="Value" ValueProperty="Count" />
+                <RadzenLegend Visible="true" />
+            </RadzenChart>
+        }
     </RadzenColumn>
     <RadzenColumn>
         <h2>Order count by vehicle status</h2>
 
-        <RadzenChart>
-            <RadzenPieSeries Data="@VehicleStatus" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-            <RadzenLegend Visible="true" />
-        </RadzenChart>
+        @if (!VehicleStatus.Any())
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <RadzenChart>
+                <RadzenPieSeries Data="@VehicleStatus" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+                <RadzenLegend Visible="true" />
+            </RadzenChart>
+        }
     </RadzenColumn>
     <RadzenColumn>
         <h2>Order count by trailer type</h2>
-
-        <RadzenChart>
-            <RadzenPieSeries Data="@TrailerTypes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-            <RadzenLegend Visible="true" />
-        </RadzenChart>
+        
+        @if (!TrailerTypes.Any())
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <RadzenChart>
+                <RadzenPieSeries Data="@TrailerTypes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
+                <RadzenLegend Visible="true" />
+            </RadzenChart>
+        }
     </RadzenColumn>
 </RadzenRow>
 

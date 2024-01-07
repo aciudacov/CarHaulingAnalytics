@@ -202,15 +202,15 @@ public class WidgetDataService
 
     public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates()
     {
-        var lowerDate = await _context.Orders.MinAsync(o => o.DataCollectedAt);
-        var upperDate = await _context.Orders.MaxAsync(o => o.DataCollectedAt);
+        var lowerDate = await _context.Orders.MinAsync(o => o.CreatedDate);
+        var upperDate = await _context.Orders.MaxAsync(o => o.CreatedDate);
         return (lowerDate, upperDate);
     }
     
     private IQueryable<LoadboardOrder> GetBaseQuery(OverviewFilterModel model)
     {
         return _context.Orders
-            .Where(o => !model.Date.HasValue || o.DataCollectedAt.Day == model.Date.Value.Day)
+            .Where(o => !model.Date.HasValue || o.CreatedDate.Day == model.Date.Value.Day)
             .Where(o => !model.TrailerType.HasValue || o.TrailerType == model.TrailerType.Value)
             .Where(o => o.Price >= model.PriceLimits.Min() && o.Price <= model.PriceLimits.Max())
             .Where(o => o.Distance >= model.RangeLimits.Min() && o.Distance <= model.RangeLimits.Max())

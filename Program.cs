@@ -13,14 +13,13 @@ public class Program
 
         builder.Services.AddRazorPages();
         builder.Services.AddServerSideBlazor();
-        builder.Services.AddSingleton<WeatherForecastService>();
         builder.Services.AddTransient<WidgetDataService>();
 
         builder.Services.AddRadzenComponents();
 
         builder.Services.AddDbContext<AnalyticContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration["DatabaseConnection"]);
+            options.UseSqlServer("Server=tcp:carhaulinganalytics.database.windows.net,1433;Initial Catalog=CarHaulingAnalytics;Persist Security Info=False;User ID=carhauler;Password=cVb![0c!1K095P1X;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=90;");
             options.LogTo(Log.Information);
         }, ServiceLifetime.Transient);
 
