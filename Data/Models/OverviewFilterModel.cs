@@ -10,6 +10,6 @@ public class OverviewFilterModel
     public TrailerTypes? TrailerType { get; set; }
     public DateTime? Date { get; set; }
     public List<States>? ExcludedStates { get; set; } = new() { States.AK, States.HI };
-    public bool ExcludePickup { get; set; }
-    public bool ExcludeDelivery { get; set; }
+    public bool ExcludePickup { get; set; } = true;
+    public bool ExcludeDelivery { get; set; } = true;
 }
