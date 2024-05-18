@@ -23,14 +23,14 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: https://carhaulinganalytics20231220213946.azurecr.io/
-        username: ${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_5969c670e9244f47b14aae28b81c86c7 }}
+        username: ${{ secrets.AzureAppService_ContainerUsername_b3e6e0e86f4743afaf1f68ada367376e }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_acceccb247554412880ad22db85626b3 }}
 
     - name: Build and push container image to registry
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}/carhaulinganalytics:${{ github.sha }}
+        tags: carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_b3e6e0e86f4743afaf1f68ada367376e }}/carhaulinganalytics:${{ github.sha }}
         file: ./Dockerfile
 
   deploy:
@@ -47,5 +47,5 @@ jobs:
       with:
         app-name: 'CarHaulingAnalyticsUI'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_391e54aed3c848c6a069ca4572a9802d }}
-        images: 'carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}/carhaulinganalytics:${{ github.sha }}'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_3fd3375f2d3f40649399d27f30d0f422 }}
+        images: 'carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_b3e6e0e86f4743afaf1f68ada367376e }}/carhaulinganalytics:${{ github.sha }}'
