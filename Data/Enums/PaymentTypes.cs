@@ -6,5 +6,9 @@ public enum PaymentTypes
     Check,
     CompanyCheck,
     Comcheck,
-    TCH
+    TCH,
+    ACH,
+    SuperPay,
+    Zelle,
+    Uship
 }

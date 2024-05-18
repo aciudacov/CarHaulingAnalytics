@@ -202,8 +202,8 @@ public class WidgetDataService
 
     public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates()
     {
-        var lowerDate = await _context.Orders.MinAsync(o => o.CreatedDate);
-        var upperDate = await _context.Orders.MaxAsync(o => o.CreatedDate);
+        var lowerDate = await _context.Orders.MinAsync(o => o.DataCollectedAt);
+        var upperDate = await _context.Orders.MaxAsync(o => o.DataCollectedAt);
         return (lowerDate, upperDate);
     }
     
