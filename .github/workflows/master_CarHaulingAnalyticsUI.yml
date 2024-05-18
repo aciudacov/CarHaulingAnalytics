@@ -30,7 +30,7 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: carhaulinganalytics20231220213946.azurecr.io/CarhaulingAnalytics20231220213946/carhaulinganalytics:${{ github.sha }}
+        tags: carhaulinganalytics20231220213946.azurecr.io/carhaulinganalytics20231220213946/carhaulinganalytics:${{ github.sha }}
         file: ./Dockerfile
 
   deploy:
