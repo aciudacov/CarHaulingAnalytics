@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - CarHaulingAnalyticsUI
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to registry
+      uses: docker/login-action@v2
+      with:
+        registry: https://carhaulinganalytics20231220213946.azurecr.io/
+        username: ${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_5969c670e9244f47b14aae28b81c86c7 }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}/carhaulinganalytics:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'CarHaulingAnalyticsUI'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_391e54aed3c848c6a069ca4572a9802d }}
+        images: 'carhaulinganalytics20231220213946.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_84758203ca4e487d9a0ac0689e4f2ba4 }}/carhaulinganalytics:${{ github.sha }}'
