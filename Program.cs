@@ -1,3 +1,4 @@
+using CarHaulingAnalytics.Components;
 using CarHaulingAnalytics.Data;
 using CarHaulingAnalytics.Data.Context;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +12,9 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddRazorPages();
-        builder.Services.AddServerSideBlazor();
+        builder.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+
         builder.Services.AddTransient<WidgetDataService>();
 
         builder.Services.AddRadzenComponents();
@@ -34,11 +36,13 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseStaticFiles();
+        
+
+        app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
 
         app.UseRouting();
-
-        app.MapBlazorHub();
-        app.MapFallbackToPage("/_Host");
+        app.UseAntiforgery();
 
         app.Run();
     }

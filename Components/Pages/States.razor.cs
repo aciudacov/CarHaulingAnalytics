@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
-namespace CarHaulingAnalytics.Pages;
+namespace CarHaulingAnalytics.Components.Pages;
 
 public class StatesRazor : LayoutComponentBase
 {

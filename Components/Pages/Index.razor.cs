@@ -4,7 +4,7 @@ using CarHaulingAnalytics.Data.Models;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
-namespace CarHaulingAnalytics.Pages;
+namespace CarHaulingAnalytics.Components.Pages;
 
 public class IndexRazor : LayoutComponentBase
 {
@@ -38,11 +38,14 @@ public class IndexRazor : LayoutComponentBase
 
     protected OverviewFilterModel FilterValue { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        DatePickerDates = await DataService.GetLowerAndUpperDates();
-        await LoadWidgetData(FilterValue);
-        await base.OnInitializedAsync();
+        if (firstRender)
+        {
+            DatePickerDates = await DataService.GetLowerAndUpperDates();
+            await LoadWidgetData(FilterValue);
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     private async Task LoadWidgetData(OverviewFilterModel model)
@@ -54,15 +57,15 @@ public class IndexRazor : LayoutComponentBase
         await InvokeAsync(StateHasChanged);
         DeliveryOrdersCount = await DataService.GetCountByDeliveryState(model);
         await InvokeAsync(StateHasChanged);
+        PopularRoutes = await DataService.GetPopularRoutes(model);
+        await InvokeAsync(StateHasChanged);
         AveragePrices = await DataService.GetAveragePriceByPickupState(model);
         await InvokeAsync(StateHasChanged);
         AveragePricesPerMile = await DataService.GetAveragePricePerMileByPickupState(model);
         await InvokeAsync(StateHasChanged);
-        PaymentTypesCount = await DataService.GetPaymentTypesCount(model);
-        await InvokeAsync(StateHasChanged);
-        PopularRoutes = await DataService.GetPopularRoutes(model);
-        await InvokeAsync(StateHasChanged);
         ShipperOrders = await DataService.GetShipperOrderCount(model);
+        await InvokeAsync(StateHasChanged);
+        PaymentTypesCount = await DataService.GetPaymentTypesCount(model);
         await InvokeAsync(StateHasChanged);
         VehicleStatus = await DataService.GetVehicleStatuses(model);
         await InvokeAsync(StateHasChanged);
