@@ -18,19 +18,26 @@
     </HeaderTemplate>
     <ChildContent>
         <RadzenCard  class="rz-mt-4">
-            @if (!FilterValue.Date.HasValue)
+            @if (!FilterValue.FromDate.HasValue || !FilterValue.ToDate.HasValue)
             {
                 <h5>@TotalOrders orders (last updated at @DatePickerDates.endDate UTC)</h5>
             }
             else
             {
-                <h5>@TotalOrders orders for @FilterValue.Date.Value.ToString("dd/MM/yyyy")</h5>
+                <h5>@TotalOrders orders from @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") to @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</h5>
             }
-
             <RadzenRow Class="mb-3">
+                <RadzenColumn Size="3">
+                    <h4>From date</h4>
+                    <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+                </RadzenColumn>
+                <RadzenColumn Size="3">
+                    <h4>To date</h4>
+                    <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+                </RadzenColumn>
                 <RadzenColumn Size="4">
-                    <h4>Date filter</h4>
-                    <RadzenDatePicker @bind-Value="@FilterValue.Date" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" MouseEnter="@(DatePickerTooltip)" AllowInput="false" Placeholder="All dates" />
+                    <h4>Platform filter</h4>
+                    <RadzenDropDown TValue="List<Data.Enums.SourcePlatform>" @bind-Value="@FilterValue.SelectedPlatforms" Data="@(Enum.GetValues<Data.Enums.SourcePlatform>())" Multiple="true" Chips="true" />
                 </RadzenColumn>
             </RadzenRow>
             <RadzenRow Class="mb-3">
@@ -66,7 +73,7 @@
             </RadzenRow>
             <RadzenRow>
                 <RadzenColumn Size="5">
-                    <RadzenButton Text="Apply filter" Click="FilterChanged" IsBusy="@DatePickerDisabled"/>
+                    <RadzenButton Text="Apply filter" Click="FilterChanged"/>
                 </RadzenColumn>
             </RadzenRow>
         </RadzenCard>
@@ -78,9 +85,9 @@
             {
                 <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
             }
-            @if (FilterValue.Date.HasValue)
+            @if (FilterValue.FromDate.HasValue && FilterValue.ToDate.HasValue)
             {
-                <b>, @FilterValue.Date.Value.ToString("dd/MM/yyyy") data</b>
+                <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy")-@FilterValue.ToDate.Value.ToString("dd/MM/yyyy") data</b>
             }
             @if (FilterValue.ExcludedStates is { Count: > 0})
             {
@@ -114,6 +121,7 @@ else
         <RadzenLegend Visible="false" />
     </RadzenChart>
 }
+<hr />
 <h2>Count by delivery state</h2>
 
 @if (!DeliveryOrdersCount.Any())
@@ -135,7 +143,7 @@ else
         <RadzenLegend Visible="false" />
     </RadzenChart>
 }
-
+<hr />
 <h2>Popular routes (top 20)</h2>
 
 @if (!PopularRoutes.Any())
@@ -149,7 +157,7 @@ else
         <RadzenLegend Visible="false" />
     </RadzenChart>
 }
-
+<hr />
 <h2>Average price by pickup state</h2>
 
 @if (!AveragePrices.Any())
@@ -159,11 +167,12 @@ else
 else
 {
     <RadzenChart>
-        <RadzenColumnSeries Data="@AveragePrices" Title="Average price ($)" CategoryProperty="State" ValueProperty="AveragePrice"/>
+        <RadzenColumnSeries Data="@AveragePrices" Title="Average price" CategoryProperty="State" ValueProperty="AveragePrice"/>
         <RadzenLegend Visible="false" />
+        <RadzenValueAxis Formatter="@FormatAsUSD" />
     </RadzenChart>
 }
-
+<hr />
 <h2>Average price per mile by pickup state</h2>
 
 @if (!AveragePricesPerMile.Any())
@@ -175,9 +184,10 @@ else
     <RadzenChart>
         <RadzenColumnSeries Data="@AveragePricesPerMile" Title="Average price per mile ($)" CategoryProperty="State" ValueProperty="AveragePrice" />
         <RadzenLegend Visible="false" />
+        <RadzenValueAxis Formatter="@FormatAsUSD" />
     </RadzenChart>
 }
-
+<hr />
 <h2>Top shippers by order count (top 10)</h2>
 
 @if (!ShipperOrders.Any())
@@ -192,7 +202,7 @@ else
     </RadzenChart>
 }
 
-
+<hr />
 <RadzenRow AlignItems="AlignItems.Center">
     <RadzenColumn>
         <h2>Orders by payment type</h2>

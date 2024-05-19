@@ -3,32 +3,33 @@ using CarHaulingAnalytics.Data;
 using CarHaulingAnalytics.Data.Models;
 using Microsoft.AspNetCore.Components;
 using Radzen;
+using System.Globalization;
 
 namespace CarHaulingAnalytics.Components.Pages;
 
-public class IndexRazor : LayoutComponentBase
+public class IndexRazor : LayoutComponentBase, IDisposable
 {
     [Inject] private WidgetDataService DataService { get; set; } = null!;
 
-    [Inject] private TooltipService TooltipService { get; set; } = null!;
+    private CancellationTokenSource CancellationTokenSource { get; set; } = new();
 
-    protected IEnumerable<StringCountTuple> PickupOrdersCount { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> PickupOrdersCount { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> DeliveryOrdersCount { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> DeliveryOrdersCount { get; private set; } = [];
 
-    protected IEnumerable<PickupStateAveragePrice> AveragePrices { get; private set; } = new List<PickupStateAveragePrice>();
+    protected IEnumerable<PickupStateAveragePrice> AveragePrices { get; private set; } = [];
 
-    protected IEnumerable<PickupStateAveragePrice> AveragePricesPerMile { get; private set; } = new List<PickupStateAveragePrice>();
+    protected IEnumerable<PickupStateAveragePrice> AveragePricesPerMile { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> PaymentTypesCount { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> PaymentTypesCount { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> PopularRoutes { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> PopularRoutes { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> VehicleStatus { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> VehicleStatus { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> TrailerTypes { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> TrailerTypes { get; private set; } = [];
 
-    protected IEnumerable<StringCountTuple> ShipperOrders { get; private set; } = new List<StringCountTuple>();
+    protected IEnumerable<StringCountTuple> ShipperOrders { get; private set; } = [];
 
     protected int TotalOrders { get; private set; }
 
@@ -36,66 +37,78 @@ public class IndexRazor : LayoutComponentBase
 
     protected (DateTime startDate, DateTime endDate) DatePickerDates { get; private set; }
 
-    protected OverviewFilterModel FilterValue { get; set; } = new();
+    protected OverviewFilterModel FilterValue { get; set; } = new OverviewFilterModel
+    {
+        FromDate = DateTime.UtcNow.AddDays(-7),
+        ToDate = DateTime.UtcNow
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            DatePickerDates = await DataService.GetLowerAndUpperDates();
-            await LoadWidgetData(FilterValue);
+            DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
+            await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
         }
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    private async Task LoadWidgetData(OverviewFilterModel model)
+    private async Task LoadWidgetData(OverviewFilterModel model, CancellationToken cancellationToken)
     {
-        DatePickerDisabled = true;
-        TotalOrders = await DataService.GetOrderCount(model);
-        DatePickerDates = await DataService.GetLowerAndUpperDates();
-        PickupOrdersCount = await DataService.GetCountByPickupState(model);
+        TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
+        DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
+        PickupOrdersCount = await DataService.GetCountByPickupState(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        DeliveryOrdersCount = await DataService.GetCountByDeliveryState(model);
+        DeliveryOrdersCount = await DataService.GetCountByDeliveryState(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        PopularRoutes = await DataService.GetPopularRoutes(model);
+        PopularRoutes = await DataService.GetPopularRoutes(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        AveragePrices = await DataService.GetAveragePriceByPickupState(model);
+        AveragePrices = await DataService.GetAveragePriceByPickupState(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        AveragePricesPerMile = await DataService.GetAveragePricePerMileByPickupState(model);
+        AveragePricesPerMile = await DataService.GetAveragePricePerMileByPickupState(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        ShipperOrders = await DataService.GetShipperOrderCount(model);
+        ShipperOrders = await DataService.GetShipperOrderCount(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        PaymentTypesCount = await DataService.GetPaymentTypesCount(model);
+        PaymentTypesCount = await DataService.GetPaymentTypesCount(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        VehicleStatus = await DataService.GetVehicleStatuses(model);
+        VehicleStatus = await DataService.GetVehicleStatuses(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        TrailerTypes = await DataService.GetTrailerTypes(model);
+        TrailerTypes = await DataService.GetTrailerTypes(model, cancellationToken);
         await InvokeAsync(StateHasChanged);
-        DatePickerDisabled = false;
     }
 
     private void ClearData()
     {
-        PickupOrdersCount = new List<StringCountTuple>();
-        DeliveryOrdersCount = new List<StringCountTuple>();
-        AveragePrices = new List<PickupStateAveragePrice>();
-        AveragePricesPerMile = new List<PickupStateAveragePrice>();
-        PaymentTypesCount = new List<StringCountTuple>();
-        PopularRoutes = new List<StringCountTuple>();
-        ShipperOrders = new List<StringCountTuple>();
-        VehicleStatus = new List<StringCountTuple>();
-        TrailerTypes = new List<StringCountTuple>();
+        PickupOrdersCount = [];
+        DeliveryOrdersCount = [];
+        AveragePrices = [];
+        AveragePricesPerMile = [];
+        PaymentTypesCount = [];
+        PopularRoutes = [];
+        ShipperOrders = [];
+        VehicleStatus = [];
+        TrailerTypes = [];
     }
 
     protected async Task FilterChanged()
     {
+        CancellationTokenSource.Cancel();
+        CancellationTokenSource.Dispose();
+        await Task.Delay(1000);
         ClearData();
         await InvokeAsync(StateHasChanged);
-        await LoadWidgetData(FilterValue);
+        CancellationTokenSource = new();
+        await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
     }
 
-    protected void DatePickerTooltip(ElementReference elementReference)
+    protected string FormatAsUSD(object value)
     {
-        TooltipService.Open(elementReference, "Filter orders by date. The widgets will show data only for the date selected.", new TooltipOptions());
+        return ((double)value).ToString("C2", CultureInfo.CreateSpecificCulture("en-US"));
+    }
+
+    public void Dispose()
+    {
+        CancellationTokenSource.Cancel();
+        CancellationTokenSource.Dispose();
     }
 }

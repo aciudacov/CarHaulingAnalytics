@@ -7,22 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CarHaulingAnalytics.Data;
 
-public class WidgetDataService
+public class WidgetDataService(AnalyticContext context)
 {
-    private readonly AnalyticContext _context;
-
-    public WidgetDataService(AnalyticContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<int> GetOrderCount(OverviewFilterModel model)
+    public async Task<int> GetOrderCount(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         return await GetBaseQuery(model)
-            .CountAsync();
+            .CountAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetCountByPickupState(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetCountByPickupState(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(o => o.PickupState)
@@ -33,7 +26,7 @@ public class WidgetDataService
                 OrdersCount = n.Count()
             })
             .OrderBy(o => o.State)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -42,7 +35,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetCountByDeliveryState(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetCountByDeliveryState(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(o => o.DeliveryState)
@@ -53,7 +46,7 @@ public class WidgetDataService
                 OrdersCount = n.Count()
             })
             .OrderBy(o => o.State)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -62,19 +55,19 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetPopularRoutes(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetPopularRoutes(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
-            .GroupBy(o => new{ PickupState = o.PickupState, DeliveryState = o.DeliveryState })
+            .GroupBy(o => new{ o.PickupState, o.DeliveryState })
             .Where(w => w.Key.PickupState != States.Canada && w.Key.DeliveryState != States.Canada)
             .Select(g => new
             {
-                PickupState = g.Key.PickupState,
-                DeliveryState = g.Key.DeliveryState,
+                g.Key.PickupState,
+                g.Key.DeliveryState,
                 OrderCount = g.Count()
             }).OrderByDescending(o => o.OrderCount)
             .Take(20)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple()
         {
@@ -83,7 +76,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<PickupStateAveragePrice>> GetAveragePriceByPickupState(OverviewFilterModel model)
+    public async Task<IEnumerable<PickupStateAveragePrice>> GetAveragePriceByPickupState(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(o => o.PickupState)
@@ -94,7 +87,7 @@ public class WidgetDataService
                 AveragePrice = n.Average(a => a.Price)
             })
             .OrderBy(o => o.State)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new PickupStateAveragePrice
         {
@@ -103,7 +96,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<PickupStateAveragePrice>> GetAveragePricePerMileByPickupState(OverviewFilterModel model)
+    public async Task<IEnumerable<PickupStateAveragePrice>> GetAveragePricePerMileByPickupState(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .Where(o => o.PricePerMile > 0 && o.PricePerMile < 300)
@@ -116,7 +109,7 @@ public class WidgetDataService
                 //AveragePrice = n.Average(a => a.VehicleCount == 1 ? a.PricePerMile : a.PricePerMile / a.VehicleCount)
             })
             .OrderBy(o => o.State)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new PickupStateAveragePrice
         {
@@ -125,7 +118,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetShipperOrderCount(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetShipperOrderCount(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .Where(o => o.PricePerMile > 0 && o.PricePerMile < 300)
@@ -137,7 +130,7 @@ public class WidgetDataService
             })
             .OrderByDescending(o => o.OrderCount)
             .Take(10)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -146,7 +139,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetPaymentTypesCount(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetPaymentTypesCount(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .Where(o => o.PricePerMile > 0 && o.PricePerMile < 300)
@@ -157,7 +150,7 @@ public class WidgetDataService
                 OrderCount = n.Count()
             })
             .OrderBy(o => o.PaymentType)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -166,7 +159,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetVehicleStatuses(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetVehicleStatuses(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(g => g.HasInoperable)
@@ -174,7 +167,7 @@ public class WidgetDataService
             {
                 Inop = n.Key,
                 Count = n.Count()
-            }).ToListAsync();
+            }).ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -183,7 +176,7 @@ public class WidgetDataService
         });
     }
 
-    public async Task<IEnumerable<StringCountTuple>> GetTrailerTypes(OverviewFilterModel model)
+    public async Task<IEnumerable<StringCountTuple>> GetTrailerTypes(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(g => g.TrailerType)
@@ -191,7 +184,7 @@ public class WidgetDataService
             {
                 TrailerType = n.Key,
                 Count = n.Count()
-            }).ToListAsync();
+            }).ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple
         {
@@ -200,21 +193,74 @@ public class WidgetDataService
         });
     }
 
-    public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates()
+    public async Task<IEnumerable<DateAverageTuple>> GetAveragePriceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
     {
-        var lowerDate = await _context.Orders.MinAsync(o => o.DataCollectedAt);
-        var upperDate = await _context.Orders.MaxAsync(o => o.DataCollectedAt);
+        var result = await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(n => new
+            {
+                Date = n.Key,
+                Average = n.Average(s => s.Price)
+            }).ToListAsync(cancellationToken);
+
+        return result.Select(r => new DateAverageTuple
+        {
+            Date = r.Date,
+            Average = r.Average,
+        });
+    }
+
+    public async Task<IEnumerable<DateAverageTuple>> GetAveragePricePerMileTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var result = await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(n => new
+            {
+                Date = n.Key,
+                Average = n.Average(s => s.PricePerMile)
+            }).ToListAsync(cancellationToken);
+
+        return result.Select(r => new DateAverageTuple
+        {
+            Date = r.Date,
+            Average = r.Average,
+        });
+    }
+
+    public async Task<IEnumerable<DateAverageTuple>> GetAverageDistanceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var result = await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(n => new
+            {
+                Date = n.Key,
+                Average = n.Average(s => s.Distance)
+            }).ToListAsync(cancellationToken);
+
+        return result.Select(r => new DateAverageTuple
+        {
+            Date = r.Date,
+            Average = decimal.Round(r.Average, 2, MidpointRounding.AwayFromZero)
+        });
+    }
+
+    public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates(CancellationToken cancellationToken)
+    {
+        var lowerDate = await context.Orders.MinAsync(o => o.DataCollectedAt, cancellationToken);
+        var upperDate = await context.Orders.MaxAsync(o => o.DataCollectedAt, cancellationToken);
         return (lowerDate, upperDate);
     }
     
     private IQueryable<LoadboardOrder> GetBaseQuery(OverviewFilterModel model)
     {
-        return _context.Orders
-            .Where(o => !model.Date.HasValue || o.CreatedDate.Day == model.Date.Value.Day)
+        return context.Orders
+            .Where(o => !model.FromDate.HasValue || o.CreatedDate >= model.FromDate.Value)
+            .Where(o => !model.ToDate.HasValue || o.CreatedDate <= model.ToDate.Value)
             .Where(o => !model.TrailerType.HasValue || o.TrailerType == model.TrailerType.Value)
             .Where(o => o.Price >= model.PriceLimits.Min() && o.Price <= model.PriceLimits.Max())
             .Where(o => o.Distance >= model.RangeLimits.Min() && o.Distance <= model.RangeLimits.Max())
             .Where(o => !model.ExcludePickup || !model.ExcludedStates.Contains(o.PickupState))
-            .Where(o => !model.ExcludeDelivery || !model.ExcludedStates.Contains(o.DeliveryState));
+            .Where(o => !model.ExcludeDelivery || !model.ExcludedStates.Contains(o.DeliveryState))
+            .Where(o => model.SelectedPlatforms.Count == 0 || model.SelectedPlatforms.Contains(o.SourcePlatform));
     }
 }

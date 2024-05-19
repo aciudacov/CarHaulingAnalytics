@@ -1,5 +1,5 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
+    <div>
         <a class="navbar-brand" href="">Car Hauling Analytics</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
@@ -11,17 +11,17 @@
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Overview
+                <RadzenIcon Icon="dashboard" /><span class="ms-1">Overview</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-globe" aria-hidden="true"></span> States
+            <NavLink class="nav-link" href="trends">
+                <RadzenIcon Icon="trending_up" /><span class="ms-1">Trends</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-dollar" aria-hidden="true"></span> Prices
+                <RadzenIcon Icon="compare_arrows" /><span class="ms-1">Compare</span>
             </NavLink>
         </div>
     </nav>
