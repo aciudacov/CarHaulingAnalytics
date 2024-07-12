@@ -261,7 +261,7 @@ public class WidgetDataService(AnalyticContext context)
             .Where(o => o.Distance >= model.LowerRangeLimit && o.Distance <= model.UpperRangeLimit)
             .Where(o => model.ExcludedStates != null && (!model.ExcludePickup || !model.ExcludedStates.Contains(o.PickupState)))
             .Where(o => model.ExcludedStates != null && (!model.ExcludeDelivery || !model.ExcludedStates.Contains(o.DeliveryState)))
-            .Where(o => model.SelectedState.HasValue && o.DeliveryState == model.SelectedState.Value)
+            .Where(o => !model.SelectedState.HasValue || (model.SelectedState.HasValue && o.DeliveryState == model.SelectedState.Value))
             .Where(o => model.SelectedPlatforms.Count == 0 || model.SelectedPlatforms.Contains(o.SourcePlatform));
     }
 }
