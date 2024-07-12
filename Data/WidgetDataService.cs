@@ -193,7 +193,7 @@ public class WidgetDataService(AnalyticContext context)
         });
     }
 
-    public async Task<IEnumerable<DateAverageTuple>> GetAveragePriceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    public async Task<List<DateAverageTuple>> GetAveragePriceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(g => g.CreatedDate.Date)
@@ -207,10 +207,10 @@ public class WidgetDataService(AnalyticContext context)
         {
             Date = r.Date,
             Average = r.Average,
-        });
+        }).ToList();
     }
 
-    public async Task<IEnumerable<DateAverageTuple>> GetAveragePricePerMileTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    public async Task<List<DateAverageTuple>> GetAveragePricePerMileTrend(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
             .GroupBy(g => g.CreatedDate.Date)
@@ -224,7 +224,7 @@ public class WidgetDataService(AnalyticContext context)
         {
             Date = r.Date,
             Average = r.Average,
-        });
+        }).ToList();
     }
 
     public async Task<IEnumerable<DateAverageTuple>> GetAverageDistanceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
@@ -257,10 +257,11 @@ public class WidgetDataService(AnalyticContext context)
             .Where(o => !model.FromDate.HasValue || o.CreatedDate >= model.FromDate.Value)
             .Where(o => !model.ToDate.HasValue || o.CreatedDate <= model.ToDate.Value)
             .Where(o => !model.TrailerType.HasValue || o.TrailerType == model.TrailerType.Value)
-            .Where(o => o.Price >= model.PriceLimits.Min() && o.Price <= model.PriceLimits.Max())
-            .Where(o => o.Distance >= model.RangeLimits.Min() && o.Distance <= model.RangeLimits.Max())
-            .Where(o => !model.ExcludePickup || !model.ExcludedStates.Contains(o.PickupState))
-            .Where(o => !model.ExcludeDelivery || !model.ExcludedStates.Contains(o.DeliveryState))
+            .Where(o => o.Price >= model.LowerPriceLimit && o.Price <= model.UpperPriceLimit)
+            .Where(o => o.Distance >= model.LowerRangeLimit && o.Distance <= model.UpperRangeLimit)
+            .Where(o => model.ExcludedStates != null && (!model.ExcludePickup || !model.ExcludedStates.Contains(o.PickupState)))
+            .Where(o => model.ExcludedStates != null && (!model.ExcludeDelivery || !model.ExcludedStates.Contains(o.DeliveryState)))
+            .Where(o => model.SelectedState.HasValue && o.DeliveryState == model.SelectedState.Value)
             .Where(o => model.SelectedPlatforms.Count == 0 || model.SelectedPlatforms.Contains(o.SourcePlatform));
     }
 }

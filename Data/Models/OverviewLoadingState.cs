@@ -1,6 +1,6 @@
 ﻿namespace CarHaulingAnalytics.Data.Models;
 
-public class LoadingState
+public class OverviewLoadingState
 {
     public bool PickupCountLoading { get; set; } = true;
     public bool DeliveryCountLoading { get; set; } = true;

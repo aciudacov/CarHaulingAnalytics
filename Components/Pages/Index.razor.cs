@@ -22,19 +22,12 @@ public class IndexRazor : LayoutComponentBase, IDisposable
 
     protected int TotalOrders { get; private set; }
 
-    protected bool DatePickerDisabled { get; private set; }
+    protected OverviewLoadingState Loading { get; } = new();
 
-    protected LoadingState Loading { get; set; } = new();
+    protected RadzenButton Button { get; set; } = new();
+    protected Popup Popup { get; set; } = new();
 
-    protected RadzenButton button;
-    protected Popup popup;
-
-    protected int LowerPriceLimit { get; set; } = 300;
-    protected int UpperPriceLimit { get; set; } = 999;
-    protected int LowerRangeLimit { get; set; } = 0;
-    protected int UpperRangeLimit { get; set; } = 600;
-
-    protected OverviewFilterModel FilterValue { get; set; } = new()
+    protected OverviewFilterModel FilterValue { get; } = new()
     {
         FromDate = DateTime.UtcNow.AddDays(-7),
         ToDate = DateTime.UtcNow
@@ -51,7 +44,7 @@ public class IndexRazor : LayoutComponentBase, IDisposable
 
     protected async Task FilterChanged()
     {
-        if (LowerPriceLimit > UpperPriceLimit)
+        if (FilterValue.LowerPriceLimit > FilterValue.UpperPriceLimit)
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -62,7 +55,7 @@ public class IndexRazor : LayoutComponentBase, IDisposable
             });
             return;
         }
-        if (LowerRangeLimit > UpperRangeLimit)
+        if (FilterValue.LowerRangeLimit > FilterValue.UpperRangeLimit)
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -73,6 +66,17 @@ public class IndexRazor : LayoutComponentBase, IDisposable
             });
             return;
         }
+        if (FilterValue.MinVehicles > FilterValue.MaxVehicles)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 5000,
+                Summary = "Error",
+                Detail = "Minimal vehicle amount cannot be greater that maximal amount"
+            });
+            return;
+        }
         NotificationService.Notify(new NotificationMessage
         {
             Severity = NotificationSeverity.Info,
@@ -80,17 +84,16 @@ public class IndexRazor : LayoutComponentBase, IDisposable
             Summary = "Please wait",
             Detail = "Loading chart data"
         });
-        await popup.CloseAsync(button.Element);
+        await Popup.CloseAsync(Button.Element);
         await CancellationTokenSource.CancelAsync();
         CancellationTokenSource.Dispose();
         CancellationTokenSource = new CancellationTokenSource();
-        FilterValue.PriceLimits = [LowerPriceLimit, UpperPriceLimit];
-        FilterValue.RangeLimits = [LowerRangeLimit, UpperRangeLimit];
         await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
     }
 
     private async Task LoadWidgetData(OverviewFilterModel model, CancellationToken cancellationToken)
     {
+        DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
         TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
         await RenderHoneycombPickup(model, cancellationToken);
         await RenderHoneycombDelivery(model, cancellationToken);

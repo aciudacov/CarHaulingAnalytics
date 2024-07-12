@@ -15,8 +15,8 @@
             </NavLink>
         </div>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="trends">
-                <RadzenIcon Icon="trending_up" /><span class="ms-1">Trends</span>
+            <NavLink class="nav-link" href="analyze">
+                <RadzenIcon Icon="query_stats" /><span class="ms-1">Analyze</span>
             </NavLink>
         </div>
         <div class="nav-item px-3">
@@ -28,12 +28,12 @@
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
+    private bool _collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string? NavMenuCssClass => _collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
-        collapseNavMenu = !collapseNavMenu;
+        _collapseNavMenu = !_collapseNavMenu;
     }
 }

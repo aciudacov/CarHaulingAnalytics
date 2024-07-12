@@ -12,9 +12,12 @@
         height: 35vw;
         margin: 0 auto;
         border-radius: 10px;
-        -webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
-        -moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
-        box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+        -webkit-box-shadow: 0 0 5px 0 #000000;
+        -webkit-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        -moz-box-shadow: 0 0 5px 0 #000000;
+        -moz-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        box-shadow: 0 0 5px 0 #000000;
+        box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
     }
 
     caption {
@@ -58,8 +61,8 @@
 
 <div class="ontop">
     <RadzenCard>
-        <RadzenButton @ref="button" Icon="filter_alt" Text="Filters" Click="@(args => popup.ToggleAsync(button.Element))" />
-        <b>Displaying orders: $@FilterValue.PriceLimits.Min() - $@FilterValue.PriceLimits.Max(), @FilterValue.RangeLimits.Min()mi - @FilterValue.RangeLimits.Max()mi</b>
+        <RadzenButton @ref="Button" Icon="filter_alt" Text="Filters" Click="@(_ => Popup.ToggleAsync(Button.Element))" />
+        <b>Displaying orders: $@FilterValue.LowerPriceLimit - $@FilterValue.UpperPriceLimit, @FilterValue.LowerRangeLimit mi - @FilterValue.UpperRangeLimit mi</b>
         @if (FilterValue.TrailerType.HasValue)
         {
             <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
@@ -75,7 +78,7 @@
     </RadzenCard>
 </div>
 
-<Popup @ref="popup" Lazy="true" Style="display:none;position:absolute;height:300px;width:50vw;padding:5px;">
+<Popup @ref="Popup" Lazy="true" Style="display:none;position:absolute;height:300px;width:50vw;padding:5px;">
     <RadzenCard>
         @if (!FilterValue.FromDate.HasValue || !FilterValue.ToDate.HasValue)
         {
@@ -88,11 +91,11 @@
         <RadzenRow Class="mb-3">
             <RadzenColumn Size="3">
                 <h4>From date</h4>
-                <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+                <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" AllowInput="false" Placeholder="All dates" />
             </RadzenColumn>
             <RadzenColumn Size="3">
                 <h4>To date</h4>
-                <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+                <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" AllowInput="false" Placeholder="All dates" />
             </RadzenColumn>
             <RadzenColumn Size="4">
                 <h4>Platform filter</h4>
@@ -101,17 +104,24 @@
         </RadzenRow>
         <RadzenRow Class="mb-3">
             <RadzenColumn Size="12">
-                <h4>Price filter (from $@LowerPriceLimit to $@UpperPriceLimit)</h4>
-                <RadzenNumeric Min="300" Max="7000" @bind-Value="@LowerPriceLimit" />
-                <RadzenNumeric Min="300" Max="7000" @bind-Value="@UpperPriceLimit" />
+                <h4>Price filter (from $@FilterValue.LowerPriceLimit to $@FilterValue.UpperPriceLimit)</h4>
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@FilterValue.LowerPriceLimit" />
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@FilterValue.UpperPriceLimit" />
             </RadzenColumn>
 
         </RadzenRow>
         <RadzenRow Class="mb-3">
             <RadzenColumn Size="12">
-                <h4>Range filter (from @LowerRangeLimit mi to @UpperRangeLimit mi)</h4>
-                <RadzenNumeric Min="0" Max="5000" @bind-Value="@LowerRangeLimit" />
-                <RadzenNumeric Min="0" Max="5000" @bind-Value="@UpperRangeLimit" />
+                <h4>Range filter (from @FilterValue.LowerRangeLimit mi to @FilterValue.UpperRangeLimit mi)</h4>
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@FilterValue.LowerRangeLimit" />
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@FilterValue.UpperRangeLimit" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Vehicle amount filter (from @FilterValue.MinVehicles to @FilterValue.MaxVehicles)</h4>
+                <RadzenNumeric Min="1" Max="10" @bind-Value="@FilterValue.MinVehicles" />
+                <RadzenNumeric Min="1" Max="10" @bind-Value="@FilterValue.MaxVehicles" />
             </RadzenColumn>
         </RadzenRow>
         <RadzenRow Class="mb-3">
