@@ -129,7 +129,7 @@ public class WidgetDataService(AnalyticContext context)
                 OrderCount = n.Count()
             })
             .OrderByDescending(o => o.OrderCount)
-            .Take(10)
+            .Take(20)
             .ToListAsync(cancellationToken);
 
         return result.Select(r => new StringCountTuple

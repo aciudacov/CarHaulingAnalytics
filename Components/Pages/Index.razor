@@ -1,254 +1,506 @@
 ﻿@using CarHaulingAnalytics.Data.Enums
 @using EnumsNET
+@using Radzen.Blazor.Rendering
 @inherits IndexRazor
 
 @page "/"
 
-<PageTitle>Overview</PageTitle>
-<style>
-    .rz-chart-tooltip {
-        z-index: 1000;
+<PageTitle>Statistics overview</PageTitle>
+
+<style type="text/css">
+    .chart-container {
+        height: 35vw;
+        margin: 0 auto;
+        border-radius: 10px;
+        -webkit-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+        -moz-box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+        box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.5);
+    }
+
+    caption {
+        padding-bottom: 15px;
+        font-family: Verdana, sans-serif;
+        font-size: 1.2em;
+        color: #555;
+    }
+
+    table {
+        font-family: Verdana, sans-serif;
+        font-size: 12pt;
+        border-collapse: collapse;
+        border: 1px solid #ebebeb;
+        margin: 10px auto;
+        text-align: center;
+        width: 100%;
+    }
+
+        table tr:nth-child(odd) {
+            background-color: #fff;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #fcf9f9;
+        }
+
+    th {
+        font-weight: 600;
+        padding: 10px;
+    }
+
+    .ontop {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        font-size: 20px;
+        z-index: 500;
     }
 </style>
-<RadzenPanel AllowCollapse="true" Collapsed="true" Class="rz-mx-auto" Style="width: 700px; position: fixed; z-index: 400; right: 0;">
-    <HeaderTemplate>
-        <RadzenText TextStyle="TextStyle.H6" Class="rz-display-flex rz-align-items-center rz-m-0">
-            <RadzenIcon Icon="filter_alt" class="rz-mr-1" /><b>Order filters</b>
-        </RadzenText>
-    </HeaderTemplate>
-    <ChildContent>
-        <RadzenCard  class="rz-mt-4">
-            @if (!FilterValue.FromDate.HasValue || !FilterValue.ToDate.HasValue)
-            {
-                <h5>@TotalOrders orders (last updated at @DatePickerDates.endDate UTC)</h5>
-            }
-            else
-            {
-                <h5>@TotalOrders orders from @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") to @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</h5>
-            }
-            <RadzenRow Class="mb-3">
-                <RadzenColumn Size="3">
-                    <h4>From date</h4>
-                    <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
-                </RadzenColumn>
-                <RadzenColumn Size="3">
-                    <h4>To date</h4>
-                    <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
-                </RadzenColumn>
-                <RadzenColumn Size="4">
-                    <h4>Platform filter</h4>
-                    <RadzenDropDown TValue="List<Data.Enums.SourcePlatform>" @bind-Value="@FilterValue.SelectedPlatforms" Data="@(Enum.GetValues<Data.Enums.SourcePlatform>())" Multiple="true" Chips="true" />
-                </RadzenColumn>
-            </RadzenRow>
-            <RadzenRow Class="mb-3">
-                <RadzenColumn Size="12">
-                    <h4>Price filter (from $@FilterValue.PriceLimits.Min() to $@FilterValue.PriceLimits.Max())</h4>
-                    <RadzenSlider Range="true" @bind-Value="@FilterValue.PriceLimits" TValue="IEnumerable<int>" Min="300" Max="7000" Step="10" Class="w-100" />
-                </RadzenColumn>
-    
-            </RadzenRow>
-            <RadzenRow Class="mb-3">
-                <RadzenColumn Size="12">
-                    <h4>Range filter (from @FilterValue.RangeLimits.Min()mi to @FilterValue.RangeLimits.Max()mi)</h4>
-                    <RadzenSlider Range="true" @bind-Value="@FilterValue.RangeLimits" TValue="IEnumerable<int>" Min="0" Max="5000" Step="10" Class="w-100" />
-                </RadzenColumn>
-            </RadzenRow>
-            <RadzenRow Class="mb-3">
-                <RadzenRow>
-                    <RadzenColumn>
-                        <h4>Trailer type filter</h4>
-                        <RadzenDropDown TValue="TrailerTypes?" @bind-Value="@FilterValue.TrailerType" Data="@(Enum.GetValues<TrailerTypes>())" AllowClear="true" Placeholder="Any trailer"/>
-                    </RadzenColumn>
-                    <RadzenColumn>
-                        <h4>Excluded states</h4>
-                        <RadzenDropDown TValue="List<Data.Enums.States>" @bind-Value="@FilterValue.ExcludedStates" Data="@(Enum.GetValues<Data.Enums.States>().Where(s => s != Data.Enums.States.Canada))" AllowClear="true" Multiple="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
-                        <br />
-                        <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludePickup" Name="PickupCheckbox" />
-                        <RadzenLabel Text="Exclude from pickup" Component="PickupCheckbox"/>
-                        <br/>
-                        <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludeDelivery" Name="DeliveryCheckbox" />
-                        <RadzenLabel Text="Exclude from delivery" Component="DeliveryCheckbox" />
-                    </RadzenColumn>
-                </RadzenRow>
-            </RadzenRow>
+
+<div class="ontop">
+    <RadzenCard>
+        <RadzenButton @ref="button" Icon="filter_alt" Text="Filters" Click="@(args => popup.ToggleAsync(button.Element))" />
+        <b>Displaying orders: $@FilterValue.PriceLimits.Min() - $@FilterValue.PriceLimits.Max(), @FilterValue.RangeLimits.Min()mi - @FilterValue.RangeLimits.Max()mi</b>
+        @if (FilterValue.TrailerType.HasValue)
+        {
+            <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
+        }
+        @if (FilterValue is { FromDate: not null, ToDate: not null })
+        {
+            <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") - @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</b>
+        }
+        @if (FilterValue.ExcludedStates is { Count: > 0 })
+        {
+            <b>, @FilterValue.ExcludedStates.Count excluded state(s)</b>
+        }
+    </RadzenCard>
+</div>
+
+<Popup @ref="popup" Lazy="true" Style="display:none;position:absolute;height:300px;width:50vw;padding:5px;">
+    <RadzenCard>
+        @if (!FilterValue.FromDate.HasValue || !FilterValue.ToDate.HasValue)
+        {
+            <h5>@TotalOrders orders (last updated at @DatePickerDates.endDate UTC)</h5>
+        }
+        else
+        {
+            <h5>@TotalOrders orders from @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") to @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</h5>
+        }
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="3">
+                <h4>From date</h4>
+                <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+            </RadzenColumn>
+            <RadzenColumn Size="3">
+                <h4>To date</h4>
+                <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" Disabled="@DatePickerDisabled" AllowInput="false" Placeholder="All dates" />
+            </RadzenColumn>
+            <RadzenColumn Size="4">
+                <h4>Platform filter</h4>
+                <RadzenDropDown TValue="List<SourcePlatform>" @bind-Value="@FilterValue.SelectedPlatforms" Data="@(Enum.GetValues<SourcePlatform>())" Multiple="true" Chips="true" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Price filter (from $@LowerPriceLimit to $@UpperPriceLimit)</h4>
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@LowerPriceLimit" />
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@UpperPriceLimit" />
+            </RadzenColumn>
+
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Range filter (from @LowerRangeLimit mi to @UpperRangeLimit mi)</h4>
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@LowerRangeLimit" />
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@UpperRangeLimit" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
             <RadzenRow>
-                <RadzenColumn Size="5">
-                    <RadzenButton Text="Apply filter" Click="FilterChanged"/>
+                <RadzenColumn>
+                    <h4>Trailer type filter</h4>
+                    <RadzenDropDown TValue="TrailerTypes?" @bind-Value="@FilterValue.TrailerType" Data="@(Enum.GetValues<TrailerTypes>())" AllowClear="true" Placeholder="Any trailer" />
+                </RadzenColumn>
+                <RadzenColumn>
+                    <h4>Excluded states</h4>
+                    <RadzenDropDown TValue="List<States>" @bind-Value="@FilterValue.ExcludedStates" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Multiple="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                    <br />
+                    <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludePickup" Name="PickupCheckbox" />
+                    <RadzenLabel Text="Exclude from pickup" Component="PickupCheckbox" />
+                    <br />
+                    <RadzenCheckBox TValue="bool" @bind-Value="FilterValue.ExcludeDelivery" Name="DeliveryCheckbox" />
+                    <RadzenLabel Text="Exclude from delivery" Component="DeliveryCheckbox" />
                 </RadzenColumn>
             </RadzenRow>
-        </RadzenCard>
-    </ChildContent>
-    <SummaryTemplate>
-        <RadzenCard class="rz-mt-4">
-            <b>Filters: $@FilterValue.PriceLimits.Min() - $@FilterValue.PriceLimits.Max(), @FilterValue.RangeLimits.Min()mi - @FilterValue.RangeLimits.Max()mi</b>
-            @if (FilterValue.TrailerType.HasValue)
-            {
-                <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
-            }
-            @if (FilterValue.FromDate.HasValue && FilterValue.ToDate.HasValue)
-            {
-                <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy")-@FilterValue.ToDate.Value.ToString("dd/MM/yyyy") data</b>
-            }
-            @if (FilterValue.ExcludedStates is { Count: > 0})
-            {
-                <b>, @FilterValue.ExcludedStates.Count excluded state(s)</b>
-            }
-        </RadzenCard>
-    </SummaryTemplate>
-</RadzenPanel>
+        </RadzenRow>
+        <RadzenRow>
+            <RadzenColumn Size="5">
+                <RadzenButton Text="Apply filter" Click="FilterChanged" />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+</Popup>
 
-<br/>
-<h2>Count by pickup state</h2>
-
-@if (!PickupOrdersCount.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart ColorScheme="ColorScheme.Pastel">
-        <RadzenColumnSeries Data="@PickupOrdersCount" Title="Ordes" CategoryProperty="Value" ValueProperty="Count">
-            <TooltipTemplate Context="data">
-                <div style="z-index: 999">
-                    <b>@data.Value</b>
-                    <br/>
-                    <strong>@data.Count</strong>
-                    <br/>
-                    <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
-                </div>
-            </TooltipTemplate>
-        </RadzenColumnSeries>
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
-}
-<hr />
-<h2>Count by delivery state</h2>
-
-@if (!DeliveryOrdersCount.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart ColorScheme="ColorScheme.Pastel">
-        <RadzenColumnSeries Data="@DeliveryOrdersCount" Title="Orders" CategoryProperty="Value" ValueProperty="Count">
-            <TooltipTemplate Context="data">
-                <b>@data.Value</b>
-                <br />
-                <strong>@data.Count</strong>
-                <br />
-                <i>@decimal.Round((decimal)data.Count / TotalOrders * 100, 2, MidpointRounding.AwayFromZero)%</i>
-            </TooltipTemplate>
-        </RadzenColumnSeries>
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
-}
-<hr />
-<h2>Popular routes (top 20)</h2>
-
-@if (!PopularRoutes.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart ColorScheme="ColorScheme.Pastel">
-        <RadzenColumnSeries Data="@PopularRoutes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
-}
-<hr />
-<h2>Average price by pickup state</h2>
-
-@if (!AveragePrices.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart>
-        <RadzenColumnSeries Data="@AveragePrices" Title="Average price" CategoryProperty="State" ValueProperty="AveragePrice"/>
-        <RadzenLegend Visible="false" />
-        <RadzenValueAxis Formatter="@FormatAsUSD" />
-    </RadzenChart>
-}
-<hr />
-<h2>Average price per mile by pickup state</h2>
-
-@if (!AveragePricesPerMile.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart>
-        <RadzenColumnSeries Data="@AveragePricesPerMile" Title="Average price per mile ($)" CategoryProperty="State" ValueProperty="AveragePrice" />
-        <RadzenLegend Visible="false" />
-        <RadzenValueAxis Formatter="@FormatAsUSD" />
-    </RadzenChart>
-}
-<hr />
-<h2>Top shippers by order count (top 10)</h2>
-
-@if (!ShipperOrders.Any())
-{
-    <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-}
-else
-{
-    <RadzenChart ColorScheme="ColorScheme.Pastel">
-        <RadzenBarSeries Data="@ShipperOrders" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
-}
-
-<hr />
-<RadzenRow AlignItems="AlignItems.Center">
-    <RadzenColumn>
-        <h2>Orders by payment type</h2>
-        
-        @if (!PaymentTypesCount.Any())
+<RadzenRow class="mt-2">
+    <RadzenColumn Size="6">
+        @if (Loading.PickupCountLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
         }
         else
         {
-            <RadzenChart>
-                <RadzenPieSeries Data="@PaymentTypesCount" Title="Payment type count" CategoryProperty="Value" ValueProperty="Count" />
-                <RadzenLegend Visible="true" />
-            </RadzenChart>
+            <div class="chart-container" id="honeycombPickup">
+            </div>
         }
     </RadzenColumn>
-    <RadzenColumn>
-        <h2>Order count by vehicle status</h2>
-
-        @if (!VehicleStatus.Any())
+    <RadzenColumn Size="6">
+        @if (Loading.DeliveryCountLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
         }
         else
         {
-            <RadzenChart>
-                <RadzenPieSeries Data="@VehicleStatus" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-                <RadzenLegend Visible="true" />
-            </RadzenChart>
+            <div class="chart-container" id="honeycombDelivery">
+            </div>
         }
     </RadzenColumn>
-    <RadzenColumn>
-        <h2>Order count by trailer type</h2>
-        
-        @if (!TrailerTypes.Any())
+</RadzenRow>
+<RadzenRow class="mt-3">
+    <RadzenColumn Size="6">
+        @if (Loading.AveragePriceLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
         }
         else
         {
-            <RadzenChart>
-                <RadzenPieSeries Data="@TrailerTypes" Title="Orders" CategoryProperty="Value" ValueProperty="Count" />
-                <RadzenLegend Visible="true" />
-            </RadzenChart>
+            <div class="chart-container" id="honeycombPrice">
+            </div>
+        }
+    </RadzenColumn>
+    <RadzenColumn Size="6">
+        @if (Loading.AveragePricePerMileLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="honeycombPricePerMile">
+            </div>
+        }
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow class="mt-3">
+    <RadzenColumn Size="6">
+        @if (Loading.PopularShippersLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="shipperCloud">
+            </div>
+        }
+    </RadzenColumn>
+    <RadzenColumn Size="6">
+        @if (Loading.PopularRoutesLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="dependencyPickup">
+            </div>
+        }
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow class="mt-3">
+    <RadzenColumn Size="4">
+        @if (Loading.PaymentTypesLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="paymentBreakdown">
+            </div>
+        }
+    </RadzenColumn>
+    <RadzenColumn Size="4">
+        @if (Loading.VehicleStatusesLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="vehicleStatusBreakdown">
+            </div>
+        }
+
+    </RadzenColumn>
+    <RadzenColumn Size="4">
+        @if (Loading.TrailerTypesLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="trailerTypeBreakdown">
+            </div>
         }
     </RadzenColumn>
 </RadzenRow>
 
+<script type="text/javascript">
+    function renderHoneycombMap(containerId, ranges, stateData, title) {
+        const originalData = [
+            { 'hc-a2': 'AL', name: 'Alabama', x: 6, y: 7, value: 0 },
+            { 'hc-a2': 'AK', name: 'Alaska', x: 0, y: 0, value: 0 },
+            { 'hc-a2': 'AZ', name: 'Arizona', x: 5, y: 3, value: 0 },
+            { 'hc-a2': 'AR', name: 'Arkansas', x: 5, y: 6, value: 0 },
+            { 'hc-a2': 'CA', name: 'California', x: 5, y: 2, value: 0 },
+            { 'hc-a2': 'CO', name: 'Colorado', x: 4, y: 3, value: 0 },
+            { 'hc-a2': 'CT', name: 'Connecticut', x: 3, y: 11, value: 0 },
+            { 'hc-a2': 'DE', name: 'Delaware', x: 4, y: 9, value: 0 },
+            { 'hc-a2': 'DC', name: 'District of Columbia', x: 4, y: 10, value: 0 },
+            { 'hc-a2': 'FL', name: 'Florida', x: 8, y: 8, value: 0 },
+            { 'hc-a2': 'GA', name: 'Georgia', x: 7, y: 8, value: 0 },
+            { 'hc-a2': 'HI', name: 'Hawaii', x: 8, y: 0, value: 0 },
+            { 'hc-a2': 'ID', name: 'Idaho', x: 3, y: 2, value: 0 },
+            { 'hc-a2': 'IL', name: 'Illinois', x: 3, y: 6, value: 0 },
+            { 'hc-a2': 'IN', name: 'Indiana', x: 3, y: 7, value: 0 },
+            { 'hc-a2': 'IA', name: 'Iowa', x: 3, y: 5, value: 0 },
+            { 'hc-a2': 'KS', name: 'Kansas', x: 5, y: 5, value: 0 },
+            { 'hc-a2': 'KY', name: 'Kentucky', x: 4, y: 6, value: 0 },
+            { 'hc-a2': 'LA', name: 'Louisiana', x: 6, y: 5, value: 0 },
+            { 'hc-a2': 'ME', name: 'Maine', x: 0, y: 11, value: 0 },
+            { 'hc-a2': 'MD', name: 'Maryland', x: 4, y: 8, value: 0 },
+            { 'hc-a2': 'MA', name: 'Massachusetts', x: 2, y: 10, value: 0 },
+            { 'hc-a2': 'MI', name: 'Michigan', x: 2, y: 7, value: 0 },
+            { 'hc-a2': 'MN', name: 'Minnesota', x: 2, y: 4, value: 0 },
+            { 'hc-a2': 'MS', name: 'Mississippi', x: 6, y: 6, value: 0 },
+            { 'hc-a2': 'MO', name: 'Missouri', x: 4, y: 5, value: 0 },
+            { 'hc-a2': 'MT', name: 'Montana', x: 2, y: 2, value: 0 },
+            { 'hc-a2': 'NE', name: 'Nebraska', x: 4, y: 4, value: 0 },
+            { 'hc-a2': 'NV', name: 'Nevada', x: 4, y: 2, value: 0 },
+            { 'hc-a2': 'NH', name: 'New Hampshire', x: 1, y: 11, value: 0 },
+            { 'hc-a2': 'NJ', name: 'New Jersey', x: 3, y: 10, value: 0 },
+            { 'hc-a2': 'NM', name: 'New Mexico', x: 6, y: 3, value: 0 },
+            { 'hc-a2': 'NY', name: 'New York', x: 2, y: 9, value: 0 },
+            { 'hc-a2': 'NC', name: 'North Carolina', x: 5, y: 9, value: 0 },
+            { 'hc-a2': 'ND', name: 'North Dakota', x: 2, y: 3, value: 0 },
+            { 'hc-a2': 'OH', name: 'Ohio', x: 3, y: 8, value: 0 },
+            { 'hc-a2': 'OK', name: 'Oklahoma', x: 6, y: 4, value: 0 },
+            { 'hc-a2': 'OR', name: 'Oregon', x: 4, y: 1, value: 0 },
+            { 'hc-a2': 'PA', name: 'Pennsylvania', x: 3, y: 9, value: 0 },
+            { 'hc-a2': 'RI', name: 'Rhode Island', x: 2, y: 11, value: 0 },
+            { 'hc-a2': 'SC', name: 'South Carolina', x: 6, y: 8, value: 0 },
+            { 'hc-a2': 'SD', name: 'South Dakota', x: 3, y: 4, value: 0 },
+            { 'hc-a2': 'TN', name: 'Tennessee', x: 5, y: 7, value: 0 },
+            { 'hc-a2': 'TX', name: 'Texas', x: 7, y: 4, value: 0 },
+            { 'hc-a2': 'UT', name: 'Utah', x: 5, y: 4, value: 0 },
+            { 'hc-a2': 'VT', name: 'Vermont', x: 1, y: 10, value: 0 },
+            { 'hc-a2': 'VA', name: 'Virginia', x: 5, y: 8, value: 0 },
+            { 'hc-a2': 'WA', name: 'Washington', x: 2, y: 1, value: 0 },
+            { 'hc-a2': 'WV', name: 'West Virginia', x: 4, y: 7, value: 0 },
+            { 'hc-a2': 'WI', name: 'Wisconsin', x: 2, y: 5, value: 0 },
+            { 'hc-a2': 'WY', name: 'Wyoming', x: 3, y: 3, value: 0 }
+        ];
 
+        originalData.forEach(state => {
+            if (stateData[state['hc-a2']]) {
+                state.value = stateData[state['hc-a2']];
+            }
+        });
+
+        Highcharts.chart(containerId, {
+            chart: {
+                type: 'tilemap',
+                inverted: true,
+                height: '80%'
+            },
+
+            accessibility: {
+                enabled: false
+            },
+
+            title: {
+                text: title
+            },
+
+            xAxis: {
+                visible: false
+            },
+
+            yAxis: {
+                visible: false
+            },
+
+            colorAxis: {
+                dataClasses: ranges
+            },
+
+            tooltip: {
+                headerFormat: '',
+                pointFormat: 'Orders from <b> {point.name}</b>: <b>{point.value}</b>'
+            },
+
+            plotOptions: {
+                series: {
+                    dataLabels: {
+                        enabled: true,
+                        format: '{point.hc-a2}',
+                        color: '#000000',
+                        style: {
+                            textOutline: false
+                        }
+                    }
+                }
+            },
+
+            series: [{
+                name: '',
+                data: originalData
+            }]
+        });
+    }
+
+    function renderDependencyChart(containerId, data) {
+        var processedData = [];
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+                var parts = key.split(' ');
+                var from = parts[0];
+                var to = parts[parts.length - 1];
+                var weight = data[key];
+                processedData.push([from, to, weight]);
+            }
+        }
+
+        Highcharts.chart(containerId, {
+            title: {
+                text: 'Popular routes'
+            },
+            accessibility: {
+                enabled: false
+            },
+            series: [{
+                keys: ['from', 'to', 'weight'],
+                data: processedData,
+                type: 'dependencywheel',
+                name: 'Route orders count',
+                dataLabels: {
+                    color: '#333',
+                    style: {
+                        textOutline: 'none'
+                    },
+                    textPath: {
+                        enabled: true
+                    },
+                    distance: 10
+                },
+                size: '95%'
+            }]
+        });
+    }
+
+    function renderWordCloud(containerId, data) {
+        Highcharts.chart(containerId, {
+            accessibility: {
+                enabled: false
+            },
+            series: [{
+                type: 'wordcloud',
+                data,
+                name: 'Orders'
+            }],
+            title: {
+                text: 'Popular shippers'
+            },
+            tooltip: {
+                headerFormat: '<span style="font-size: 16px"><b>{point.key}</b>' +
+                    '</span><br>'
+            }
+        });
+    }
+
+    function renderDonutChart(containerId, data, title) {
+        let sum = data.reduce((total, currentValue) => {
+            return total + currentValue.y;
+        }, 0);
+        Highcharts.chart(containerId, {
+            chart: {
+                type: 'pie',
+                custom: {},
+                events: {
+                    render() {
+                        const chart = this,
+                            series = chart.series[0];
+                        let customLabel = chart.options.chart.custom.label;
+
+                        if (!customLabel) {
+                            customLabel = chart.options.chart.custom.label =
+                                chart.renderer.label(
+                                    'Total<br/>' +
+                                    '<strong>' + sum + '</strong>'
+                                )
+                                    .css({
+                                        color: '#000',
+                                        textAnchor: 'middle'
+                                    })
+                                    .add();
+                        }
+
+                        const x = series.center[0] + chart.plotLeft,
+                            y = series.center[1] + chart.plotTop -
+                                (customLabel.attr('height') / 2);
+
+                        customLabel.attr({
+                            x,
+                            y
+                        });
+                        customLabel.css({
+                            fontSize: `${series.center[2] / 12}px`
+                        });
+                    }
+                }
+            },
+            accessibility: {
+                enabled: false
+            },
+            title: {
+                text: title
+            },
+            tooltip: {
+                pointFormat: '{series.name}: <b>{point.percentage:.0f}%</b>'
+            },
+            legend: {
+                enabled: false
+            },
+            plotOptions: {
+                series: {
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    borderRadius: 8,
+                    dataLabels: [{
+                        enabled: true,
+                        distance: 20,
+                        format: '{point.name}'
+                    }, {
+                        enabled: true,
+                        distance: -15,
+                        format: '{point.percentage:.0f}%',
+                        style: {
+                            fontSize: '0.9em'
+                        }
+                    }],
+                    showInLegend: true
+                }
+            },
+            series: [{
+                name: 'Order percentage',
+                colorByPoint: true,
+                innerSize: '75%',
+                data: data
+            }]
+        });
+    }
+</script>

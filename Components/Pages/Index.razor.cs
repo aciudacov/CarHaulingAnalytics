@@ -1,43 +1,40 @@
-﻿using CarHaulingAnalytics.Data.Models.Widgets;
-using CarHaulingAnalytics.Data;
-using CarHaulingAnalytics.Data.Models;
+﻿using CarHaulingAnalytics.Data;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using CarHaulingAnalytics.Data.Models;
 using Radzen;
-using System.Globalization;
+using Radzen.Blazor.Rendering;
+using Radzen.Blazor;
 
 namespace CarHaulingAnalytics.Components.Pages;
 
 public class IndexRazor : LayoutComponentBase, IDisposable
 {
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+
     [Inject] private WidgetDataService DataService { get; set; } = null!;
+
+    [Inject] private NotificationService NotificationService { get; set; } = null!;
 
     private CancellationTokenSource CancellationTokenSource { get; set; } = new();
 
-    protected IEnumerable<StringCountTuple> PickupOrdersCount { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> DeliveryOrdersCount { get; private set; } = [];
-
-    protected IEnumerable<PickupStateAveragePrice> AveragePrices { get; private set; } = [];
-
-    protected IEnumerable<PickupStateAveragePrice> AveragePricesPerMile { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> PaymentTypesCount { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> PopularRoutes { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> VehicleStatus { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> TrailerTypes { get; private set; } = [];
-
-    protected IEnumerable<StringCountTuple> ShipperOrders { get; private set; } = [];
+    protected (DateTime startDate, DateTime endDate) DatePickerDates { get; private set; }
 
     protected int TotalOrders { get; private set; }
 
     protected bool DatePickerDisabled { get; private set; }
 
-    protected (DateTime startDate, DateTime endDate) DatePickerDates { get; private set; }
+    protected LoadingState Loading { get; set; } = new();
 
-    protected OverviewFilterModel FilterValue { get; set; } = new OverviewFilterModel
+    protected RadzenButton button;
+    protected Popup popup;
+
+    protected int LowerPriceLimit { get; set; } = 300;
+    protected int UpperPriceLimit { get; set; } = 999;
+    protected int LowerRangeLimit { get; set; } = 0;
+    protected int UpperRangeLimit { get; set; } = 600;
+
+    protected OverviewFilterModel FilterValue { get; set; } = new()
     {
         FromDate = DateTime.UtcNow.AddDays(-7),
         ToDate = DateTime.UtcNow
@@ -47,63 +44,221 @@ public class IndexRazor : LayoutComponentBase, IDisposable
     {
         if (firstRender)
         {
-            DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
             await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
         }
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    private async Task LoadWidgetData(OverviewFilterModel model, CancellationToken cancellationToken)
-    {
-        TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
-        DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
-        PickupOrdersCount = await DataService.GetCountByPickupState(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        DeliveryOrdersCount = await DataService.GetCountByDeliveryState(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        PopularRoutes = await DataService.GetPopularRoutes(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        AveragePrices = await DataService.GetAveragePriceByPickupState(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        AveragePricesPerMile = await DataService.GetAveragePricePerMileByPickupState(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        ShipperOrders = await DataService.GetShipperOrderCount(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        PaymentTypesCount = await DataService.GetPaymentTypesCount(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        VehicleStatus = await DataService.GetVehicleStatuses(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-        TrailerTypes = await DataService.GetTrailerTypes(model, cancellationToken);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void ClearData()
-    {
-        PickupOrdersCount = [];
-        DeliveryOrdersCount = [];
-        AveragePrices = [];
-        AveragePricesPerMile = [];
-        PaymentTypesCount = [];
-        PopularRoutes = [];
-        ShipperOrders = [];
-        VehicleStatus = [];
-        TrailerTypes = [];
-    }
-
     protected async Task FilterChanged()
     {
-        CancellationTokenSource.Cancel();
+        if (LowerPriceLimit > UpperPriceLimit)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 5000,
+                Summary = "Error",
+                Detail = "Minimal price cannot be greater that maximal price"
+            });
+            return;
+        }
+        if (LowerRangeLimit > UpperRangeLimit)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Duration = 5000,
+                Summary = "Error",
+                Detail = "Minimal range cannot be greater that maximal range"
+            });
+            return;
+        }
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Info,
+            Duration = 5000,
+            Summary = "Please wait",
+            Detail = "Loading chart data"
+        });
+        await popup.CloseAsync(button.Element);
+        await CancellationTokenSource.CancelAsync();
         CancellationTokenSource.Dispose();
-        await Task.Delay(1000);
-        ClearData();
-        await InvokeAsync(StateHasChanged);
-        CancellationTokenSource = new();
+        CancellationTokenSource = new CancellationTokenSource();
+        FilterValue.PriceLimits = [LowerPriceLimit, UpperPriceLimit];
+        FilterValue.RangeLimits = [LowerRangeLimit, UpperRangeLimit];
         await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
     }
 
-    protected string FormatAsUSD(object value)
+    private async Task LoadWidgetData(OverviewFilterModel model, CancellationToken cancellationToken)
     {
-        return ((double)value).ToString("C2", CultureInfo.CreateSpecificCulture("en-US"));
+        TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
+        await RenderHoneycombPickup(model, cancellationToken);
+        await RenderHoneycombDelivery(model, cancellationToken);
+        await RenderHoneycombPrice(model, cancellationToken);
+        await RenderHoneycombPricePerMile(model, cancellationToken);
+        await RenderShippersCloud(model, cancellationToken);
+        await RenderDependencyPickup(model, cancellationToken);
+        await RenderPaymentTypes(model, cancellationToken);
+        await RenderVehicleStatus(model, cancellationToken);
+        await RenderTrailerType(model, cancellationToken);
+    }
+
+    private async Task RenderHoneycombPickup(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.PickupCountLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var pickupData = await DataService.GetCountByPickupState(model, cancellationToken);
+        Loading.PickupCountLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var pickupDataDictionary = pickupData.ToDictionary(k => k.Value, e => e.Count);
+        var minValue = pickupDataDictionary.Values.Min();
+        var maxValue = pickupDataDictionary.Values.Max();
+        var rangeSpan = (maxValue - minValue) / 4;
+        var ranges = new[]
+        {
+            new { from = minValue, to = minValue + rangeSpan, color = "#F9EDB3", name = "< 1/4 Max" },
+            new { from = minValue + rangeSpan, to = minValue + 2 * rangeSpan, color = "#FFC428", name = "1/4 - 1/2 Max" },
+            new { from = minValue + 2 * rangeSpan, to = minValue + 3 * rangeSpan, color = "#FF7987", name = "1/2 - 3/4 Max" },
+            new { from = minValue + 3 * rangeSpan, to = maxValue, color = "#FF2371", name = "> 3/4 Max" }
+        };
+        await JsRuntime.InvokeVoidAsync("renderHoneycombMap", cancellationToken, "honeycombPickup", ranges, pickupDataDictionary, "Pickup order count");
+    }
+
+    private async Task RenderHoneycombDelivery(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.DeliveryCountLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var deliveryDate = await DataService.GetCountByDeliveryState(model, cancellationToken);
+        Loading.DeliveryCountLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var deliveryDataDictionary = deliveryDate.ToDictionary(k => k.Value, e => e.Count);
+        var minValue = deliveryDataDictionary.Values.Min();
+        var maxValue = deliveryDataDictionary.Values.Max();
+        var rangeSpan = (maxValue - minValue) / 4;
+        var ranges = new[]
+        {
+            new { from = minValue, to = minValue + rangeSpan, color = "#F9EDB3", name = "< 1/4 Max" },
+            new { from = minValue + rangeSpan, to = minValue + 2 * rangeSpan, color = "#FFC428", name = "1/4 - 1/2 Max" },
+            new { from = minValue + 2 * rangeSpan, to = minValue + 3 * rangeSpan, color = "#FF7987", name = "1/2 - 3/4 Max" },
+            new { from = minValue + 3 * rangeSpan, to = maxValue, color = "#FF2371", name = "> 3/4 Max" }
+        };
+        await JsRuntime.InvokeVoidAsync("renderHoneycombMap", cancellationToken, "honeycombDelivery", ranges, deliveryDataDictionary, "Delivery order count");
+    }
+
+    private async Task RenderHoneycombPrice(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.AveragePriceLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var pickupData = await DataService.GetAveragePriceByPickupState(model, cancellationToken);
+        Loading.AveragePriceLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var pickupDataDictionary = pickupData.ToDictionary(k => k.State, e => e.AveragePrice);
+        var minValue = pickupDataDictionary.Values.Min();
+        var maxValue = pickupDataDictionary.Values.Max();
+        var rangeSpan = (maxValue - minValue) / 4;
+        var ranges = new[]
+        {
+            new { from = minValue, to = minValue + rangeSpan, color = "#FF1100", name = "< 1/4 Max" },
+            new { from = minValue + rangeSpan, to = minValue + 2 * rangeSpan, color = "#FF7700", name = "1/4 - 1/2 Max" },
+            new { from = minValue + 2 * rangeSpan, to = minValue + 3 * rangeSpan, color = "#FFDD00", name = "1/2 - 3/4 Max" },
+            new { from = minValue + 3 * rangeSpan, to = maxValue, color = "#AEFF00", name = "> 3/4 Max" }
+        };
+        await JsRuntime.InvokeVoidAsync("renderHoneycombMap", cancellationToken, "honeycombPrice", ranges, pickupDataDictionary, "Average order price");
+    }
+
+    private async Task RenderHoneycombPricePerMile(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.AveragePricePerMileLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var deliveryDate = await DataService.GetAveragePricePerMileByPickupState(model, cancellationToken);
+        Loading.AveragePricePerMileLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var deliveryDataDictionary = deliveryDate.ToDictionary(k => k.State, e => e.AveragePrice);
+        var minValue = deliveryDataDictionary.Values.Min();
+        var maxValue = deliveryDataDictionary.Values.Max();
+        var rangeSpan = (maxValue - minValue) / 4;
+        var ranges = new[]
+        {
+            new { from = minValue, to = minValue + rangeSpan, color = "#FF1100", name = "< 1/4 Max" },
+            new { from = minValue + rangeSpan, to = minValue + 2 * rangeSpan, color = "#FF7700", name = "1/4 - 1/2 Max" },
+            new { from = minValue + 2 * rangeSpan, to = minValue + 3 * rangeSpan, color = "#FFDD00", name = "1/2 - 3/4 Max" },
+            new { from = minValue + 3 * rangeSpan, to = maxValue, color = "#AEFF00", name = "> 3/4 Max" }
+        };
+        await JsRuntime.InvokeVoidAsync("renderHoneycombMap", cancellationToken, "honeycombPricePerMile", ranges, deliveryDataDictionary, "Average price per mile");
+    }
+
+    private async Task RenderDependencyPickup(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.PopularRoutesLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var popularRoutes = await DataService.GetPopularRoutes(model, cancellationToken);
+        Loading.PopularRoutesLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var routesDictionary = popularRoutes.ToDictionary(r => r.Value, d => d.Count);
+        await JsRuntime.InvokeVoidAsync("renderDependencyChart", cancellationToken, "dependencyPickup", routesDictionary);
+    }
+
+    private async Task RenderShippersCloud(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.PopularShippersLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var popularShippers = await DataService.GetShipperOrderCount(model, cancellationToken);
+        Loading.PopularShippersLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var shipperArray = popularShippers.Select(s => new
+        {
+            name = s.Value,
+            weight = s.Count
+        }).ToArray();
+        await JsRuntime.InvokeVoidAsync("renderWordCloud", cancellationToken, "shipperCloud", shipperArray);
+    }
+
+    private async Task RenderPaymentTypes(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.PaymentTypesLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var paymentTypes = await DataService.GetPaymentTypesCount(model, cancellationToken);
+        Loading.PaymentTypesLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var paymentArray = paymentTypes.Select(p => new
+        {
+            name = p.Value,
+            y = p.Count
+        }).ToArray();
+        await JsRuntime.InvokeVoidAsync("renderDonutChart", cancellationToken, "paymentBreakdown", paymentArray,
+            "Orders by payment type");
+    }
+
+    private async Task RenderVehicleStatus(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.VehicleStatusesLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var paymentTypes = await DataService.GetVehicleStatuses(model, cancellationToken);
+        Loading.VehicleStatusesLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var paymentArray = paymentTypes.Select(p => new
+        {
+            name = p.Value,
+            y = p.Count
+        }).ToArray();
+        await JsRuntime.InvokeVoidAsync("renderDonutChart", cancellationToken, "vehicleStatusBreakdown", paymentArray,
+            "Orders by vehicle status");
+    }
+
+    private async Task RenderTrailerType(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        Loading.TrailerTypesLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var paymentTypes = await DataService.GetTrailerTypes(model, cancellationToken);
+        Loading.TrailerTypesLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var paymentArray = paymentTypes.Select(p => new
+        {
+            name = p.Value,
+            y = p.Count
+        }).ToArray();
+        await JsRuntime.InvokeVoidAsync("renderDonutChart", cancellationToken, "trailerTypeBreakdown", paymentArray,
+            "Orders by trailer type");
     }
 
     public void Dispose()
