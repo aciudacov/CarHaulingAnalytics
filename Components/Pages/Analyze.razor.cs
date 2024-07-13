@@ -104,7 +104,7 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
             date = t.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             average = t.Average
         }).ToArray();
-        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per by day");
+        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per mile by day");
     }
 
     protected async Task FilterChanged()
