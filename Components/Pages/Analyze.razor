@@ -20,34 +20,22 @@
         box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
     }
 
-    caption {
-        padding-bottom: 15px;
-        font-family: Verdana, sans-serif;
-        font-size: 1.2em;
-        color: #555;
+    .chart {
+        width: 40vw;
     }
 
-    table {
-        font-family: Verdana, sans-serif;
-        font-size: 12pt;
-        border-collapse: collapse;
-        border: 1px solid #ebebeb;
-        margin: 10px auto;
-        text-align: center;
-        width: 100%;
-    }
-
-    table tr:nth-child(odd) {
-        background-color: #fff;
-    }
-
-    table tr:nth-child(even) {
-        background-color: #fcf9f9;
-    }
-
-    th {
-        font-weight: 600;
-        padding: 10px;
+    .chart-sync {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 auto;
+        padding: 5px;
+        border-radius: 10px;
+        -webkit-box-shadow: 0 0 5px 0 #000000;
+        -webkit-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        -moz-box-shadow: 0 0 5px 0 #000000;
+        -moz-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        box-shadow: 0 0 5px 0 #000000;
+        box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
     }
 
     .ontop {
@@ -129,7 +117,7 @@
         </RadzenRow>
         <RadzenRow>
             <RadzenColumn Size="5">
-                <RadzenButton Text="Apply filter" Click="FilterChanged" />
+                <RadzenButton Text="Apply filter" Click="FilterChanged" IsBusy="!DatesLoaded" />
             </RadzenColumn>
         </RadzenRow>
     </RadzenCard>
@@ -138,84 +126,27 @@
 @if (FilterValue.SelectedState.HasValue)
 {
     <RadzenRow class="mt-2">
-        <RadzenColumn Size="6">
-            @if (Loading.PriceSeriesLoading)
-            {
-                <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-            }
-            else
-            {
-                <div class="chart-container" id="timeseriesPrice">
-                </div>
-            }
-        </RadzenColumn>
-        <RadzenColumn Size="6">
-            @if (Loading.PricePerMileSeriesLoading)
-            {
-                <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-            }
-            else
-            {
-                <div class="chart-container" id="timeseriesPricePerMile">
-                </div>
-            }
+        <RadzenColumn>
+            <div class="chart-sync" id="snapshotChart"></div>
         </RadzenColumn>
     </RadzenRow>
-    <RadzenRow class="mt-2">
+    <RadzenRow class="mt-3">
         <RadzenColumn Size="6">
-            @if (Loading.PriceCalendarLoading)
-            {
-                <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-            }
-            else
-            {
-                <div class="chart-container" id="priceCalendar">
-                </div>
-            }
+            <div class="chart-container" id="priceCalendar">
+            </div>
         </RadzenColumn>
         <RadzenColumn Size="6">
-            @if (Loading.PricePerMileCalendarLoading)
-            {
-                <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-            }
-            else
-            {
-                <div class="chart-container" id="pricePerMileCalendar">
-                </div>
-            }
+            <div class="chart-container" id="pricePerMileCalendar">
+            </div>
         </RadzenColumn>
     </RadzenRow>
 }
-<script>
-    function renderTimeSeriesChart(containerId, data, title) {
-        Highcharts.chart(containerId, {
-            chart: {
-                type: 'line'
-            },
-            xAxis: {
-                type: 'datetime'
-            },
-            title: {
-                text: title
-            },
-            legend: {
-                visible: false
-            },
-            accessibility: {
-                enabled: false
-            },
-            series: [{
-                data: data
-            }]
-        });
-    }
 
+<script>
     function renderCalendarChart(containerId, data, title) {
         const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         function generateChartData(data) {
-
-            
             const firstWeekday = new Date(data[0].date).getDay(),
                 monthLength = data.length,
                 lastElement = data[monthLength - 1].date,
@@ -223,7 +154,6 @@
                 lengthOfWeek = 6,
                 emptyTilesFirst = firstWeekday,
                 chartData = [];
-
             
             for (let emptyDay = 0; emptyDay < emptyTilesFirst; emptyDay++) {
                 chartData.push({
@@ -275,15 +205,12 @@
             chart: {
                 type: 'heatmap'
             },
-
             title: {
                 text: title
             },
-
             accessibility: {
                 enabled: false
             },
-
             tooltip: {
                 enabled: true,
                 outside: true,
@@ -293,7 +220,6 @@
                     '%Y}{/unless}',
                 nullFormat: 'No data'
             },
-
             xAxis: {
                 categories: weekdays,
                 opposite: true,
@@ -309,20 +235,14 @@
                     }
                 }
             },
-
             yAxis: {
                 min: 0,
                 max: 5,
-                accessibility: {
-                    description: 'weeks'
-                },
                 visible: false
             },
-
             legend: {
                 visible: false
             },
-
             colorAxis: {
                 min: 0,
                 stops: [
@@ -335,7 +255,6 @@
                     format: '${value}'
                 }
             },
-
             series: [{
                 keys: ['x', 'y', 'value', 'date', 'id'],
                 data: chartData,
@@ -370,6 +289,139 @@
                     y: 1
                 }]
             }]
+        });
+    }
+
+    function renderLinkedCharts(container, data) {
+        ['mousemove', 'touchmove', 'touchstart'].forEach(function (eventType) {
+            document.getElementById(container).addEventListener(
+                eventType,
+                function (e) {
+                    let chart, point, i, event;
+                    for (i = 0; i < Highcharts.charts.length-2; i = i + 1) {
+                        chart = Highcharts.charts[i];
+                        event = chart.pointer.normalize(e);
+                        point = chart.series[0].searchPoint(event, true);
+
+                        if (point) {
+                            point.highlight(e);
+                        }
+                    }
+                }
+            );
+        });
+
+        Highcharts.Pointer.prototype.reset = function () {
+            return undefined;
+        };
+
+        Highcharts.Point.prototype.highlight = function (event) {
+            event = this.series.chart.pointer.normalize(event);
+            this.onMouseOver();
+            this.series.chart.tooltip.refresh(this);
+            this.series.chart.xAxis[0].drawCrosshair(event, this);
+        };
+
+        function syncExtremes(e) {
+            const thisChart = this.chart;
+
+            if (e.trigger !== 'syncExtremes') {
+                Highcharts.each(Highcharts.charts, function (chart) {
+                    if (chart !== thisChart) {
+                        if (chart.xAxis[0].setExtremes) {
+                            chart.xAxis[0].setExtremes(
+                                e.min,
+                                e.max,
+                                undefined,
+                                false,
+                                { trigger: 'syncExtremes' }
+                            );
+                        }
+                    }
+                });
+            }
+        }
+
+        const activity = data;
+        const xData = activity.xdata;
+        document.getElementById(container).innerHTML = "";
+        let counter = 0;
+        activity.datasets.forEach(function (dataset, i) {
+            counter++;
+            dataset.data = Highcharts.map(dataset.data, function (val, j) {
+                return [xData[j], val];
+            });
+
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'chart';
+            document.getElementById(container).appendChild(chartDiv);
+
+            
+
+            Highcharts.chart(chartDiv, {
+                chart: {
+                    marginLeft: 40,
+                    spacingTop: 20,
+                    spacingBottom: 20
+                },
+                accessibility: {
+                    enabled: false
+                },
+                title: {
+                    text: dataset.name,
+                    margin: 0,
+                    x: 30
+                },
+                credits: {
+                    enabled: false
+                },
+                legend: {
+                    enabled: false
+                },
+                xAxis: {
+                    type: 'datetime',
+                    crosshair: true,
+                    events: {
+                        setExtremes: syncExtremes
+                    },
+                    labels: {
+                        format: '{value:%d %b}'
+                    }
+                },
+                yAxis: {
+                    title: {
+                        text: null
+                    }
+                },
+                tooltip: {
+                    positioner: function () {
+                        return {
+                            x: this.chart.chartWidth - this.label.width,
+                            y: 10
+                        };
+                    },
+                    borderWidth: 0,
+                    backgroundColor: 'none',
+                    pointFormat: '{point.y}',
+                    headerFormat: '',
+                    shadow: false,
+                    style: {
+                        fontSize: '18px'
+                    },
+                    valueDecimals: dataset.valueDecimals,
+                    valueSuffix: ' ' + dataset.unit
+                },
+                series: [{
+                    data: dataset.data,
+                    name: dataset.name,
+                    type: dataset.type,
+                    color: Highcharts.getOptions().colors[i],
+                    fillOpacity: 0.3,
+                    tooltip: {
+                        valueSuffix: ' ' + dataset.unit
+                    }
+                }]
+            });
         });
     }
 </script>

@@ -1,12 +1,10 @@
 ﻿using CarHaulingAnalytics.Data;
-using CarHaulingAnalytics.Data.Enums;
 using CarHaulingAnalytics.Data.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor.Rendering;
 using Radzen.Blazor;
-using System;
 using System.Globalization;
 
 namespace CarHaulingAnalytics.Components.Pages;
@@ -27,6 +25,8 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
 
     protected RadzenButton Button { get; set; } = new();
     protected Popup Popup { get; set; } = new();
+
+    protected bool DatesLoaded { get; set; }
 
     protected AnalyzeLoadingState Loading { get; set; } = new();
 
@@ -56,6 +56,8 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
                 });
             }
             DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
+            DatesLoaded = true;
+            await InvokeAsync(StateHasChanged);
         }
         await base.OnAfterRenderAsync(firstRender);
     }
@@ -64,54 +66,45 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
     {
         DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
         TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
+        await RenderSnapshotChart(model, cancellationToken);
         await RenderPriceCalendar(model, cancellationToken);
         await RenderPricePerMileCalendar(model, cancellationToken);
+    }
+
+    private async Task RenderSnapshotChart(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var result = await DataService.GetMainTrendData(model, cancellationToken);
+        await JsRuntime.InvokeVoidAsync("renderLinkedCharts", cancellationToken, "snapshotChart", result);
     }
 
     private async Task RenderPriceCalendar(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         Loading.PriceCalendarLoading = true;
-        Loading.PriceSeriesLoading = true;
         await InvokeAsync(StateHasChanged);
         var priceTrends = await DataService.GetAveragePriceTrend(model, cancellationToken);
-        Loading.PriceSeriesLoading = false;
         Loading.PriceCalendarLoading = false;
         await InvokeAsync(StateHasChanged);
-        var timestampCalendar = priceTrends.Select(t => new
-        {
-            x = ((DateTimeOffset)t.Date).ToUnixTimeMilliseconds(),
-            y = t.Average
-        }).ToArray();
         var pricesCalendar = priceTrends.Select(t => new
         {
             date = t.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             average = t.Average
         }).ToArray();
-        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "priceCalendar", pricesCalendar, "Average prices trend");
-        await JsRuntime.InvokeVoidAsync("renderTimeSeriesChart", cancellationToken, "timeseriesPrice", timestampCalendar, "Average prices trend");
+        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "priceCalendar", pricesCalendar, "Average prices by day");
     }
 
     private async Task RenderPricePerMileCalendar(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         Loading.PricePerMileCalendarLoading = true;
-        Loading.PricePerMileSeriesLoading = true;
         await InvokeAsync(StateHasChanged);
         var priceTrends = await DataService.GetAveragePricePerMileTrend(model, cancellationToken);
         Loading.PricePerMileCalendarLoading = false;
-        Loading.PricePerMileSeriesLoading = false;
         await InvokeAsync(StateHasChanged);
-        var timestampCalendar = priceTrends.Select(t => new
-        {
-            x = ((DateTimeOffset)t.Date).ToUnixTimeMilliseconds(),
-            y = t.Average
-        }).ToArray();
         var pricesCalendar = priceTrends.Select(t => new
         {
             date = t.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             average = t.Average
         }).ToArray();
-        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per mile trend");
-        await JsRuntime.InvokeVoidAsync("renderTimeSeriesChart", cancellationToken, "timeseriesPricePerMile", timestampCalendar, "Average prices per mile trend");
+        await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per by day");
     }
 
     protected async Task FilterChanged()

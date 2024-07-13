@@ -244,6 +244,58 @@ public class WidgetDataService(AnalyticContext context)
         });
     }
 
+    public async Task<SnapshotModel> GetMainTrendData(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var result = await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(n => new DateSnapshot
+            {
+                Date = n.Key,
+                AverageRange = n.Average(s => s.Distance),
+                AveragePricePerMile = n.Average(s => s.PricePerMile),
+                AveragePrice = n.Average(s => s.Price),
+                OrdersCount = n.Count()
+            }).ToListAsync(cancellationToken);
+        var rangeData = new SnapshotDataset
+        {
+            Name = "Range trend",
+            Data = result.Select(r => r.AverageRange).ToArray(),
+            Type = "area",
+            Unit = "mi",
+            ValueDecimals = 0
+        };
+        var ppmData = new SnapshotDataset
+        {
+            Name = "Price per mile trend",
+            Data = result.Select(r => r.AveragePricePerMile).ToArray(),
+            Type = "area",
+            Unit = "$",
+            ValueDecimals = 2
+        };
+        var priceData = new SnapshotDataset
+        {
+            Name = "Price trend",
+            Data = result.Select(r => r.AveragePrice).ToArray(),
+            Type = "area",
+            Unit = "$",
+            ValueDecimals = 2
+        };
+        var orderData = new SnapshotDataset
+        {
+            Name = "Order count trend",
+            Data = result.Select(r => (decimal)r.OrdersCount).ToArray(),
+            Type = "area",
+            Unit = "orders",
+            ValueDecimals = 0
+        };
+        var chartData = new SnapshotModel
+        {
+            Xdata = result.Select(r => ((DateTimeOffset)r.Date).ToUnixTimeMilliseconds()).ToArray(),
+            Datasets = [rangeData, ppmData, priceData, orderData]
+        };
+        return chartData;
+    }
+
     public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates(CancellationToken cancellationToken)
     {
         var lowerDate = await context.Orders.MinAsync(o => o.DataCollectedAt, cancellationToken);
