@@ -223,7 +223,7 @@
     </RadzenColumn>
 </RadzenRow>
 <RadzenRow class="mt-3">
-    <RadzenColumn Size="4">
+    <RadzenColumn Size="6">
         @if (Loading.PaymentTypesLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -234,7 +234,7 @@
             </div>
         }
     </RadzenColumn>
-    <RadzenColumn Size="4">
+    <RadzenColumn Size="6">
         @if (Loading.VehicleStatusesLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -246,7 +246,9 @@
         }
 
     </RadzenColumn>
-    <RadzenColumn Size="4">
+</RadzenRow>
+<RadzenRow class="mt-3">
+    <RadzenColumn Size="6">
         @if (Loading.TrailerTypesLoading)
         {
             <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
@@ -254,6 +256,17 @@
         else
         {
             <div class="chart-container" id="trailerTypeBreakdown">
+            </div>
+        }
+    </RadzenColumn>
+    <RadzenColumn Size="6">
+        @if (Loading.VehicleCountLoading)
+        {
+            <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        }
+        else
+        {
+            <div class="chart-container" id="vehicleCountBreakdown">
             </div>
         }
     </RadzenColumn>
@@ -480,7 +493,8 @@
                 text: title
             },
             tooltip: {
-                pointFormat: '{series.name}: <b>{point.percentage:.0f}%</b>'
+                pointFormat: '<span>{series.name}</span>' +
+                    ': <b>{point.percentage:.1f}%</b> ({point.y} orders)<br/>'
             },
             legend: {
                 enabled: false
@@ -511,6 +525,12 @@
                 innerSize: '75%',
                 data: data
             }]
+        });
+    }
+
+    function disposeCharts() {
+        Highcharts.charts.forEach(c => {
+            c.destroy();
         });
     }
 </script>

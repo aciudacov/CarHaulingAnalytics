@@ -11,4 +11,5 @@ public class OverviewLoadingState
     public bool PaymentTypesLoading { get; set; } = true;
     public bool VehicleStatusesLoading { get; set; } = true;
     public bool TrailerTypesLoading { get; set; } = true;
+    public bool VehicleCountLoading { get; set; } = true;
 }

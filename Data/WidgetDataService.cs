@@ -193,6 +193,23 @@ public class WidgetDataService(AnalyticContext context)
         });
     }
 
+    public async Task<IEnumerable<StringCountTuple>> GetVehicleCounts(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var result = await GetBaseQuery(model)
+            .GroupBy(g => g.VehicleCount)
+            .Select(n => new
+            {
+                VehicleCount = n.Key,
+                Count = n.Count()
+            }).ToListAsync(cancellationToken);
+
+        return result.Select(r => new StringCountTuple
+        {
+            Value = $"{r.VehicleCount} vehicle(s)",
+            Count = r.Count
+        });
+    }
+
     public async Task<List<DateAverageTuple>> GetAveragePriceTrend(OverviewFilterModel model, CancellationToken cancellationToken)
     {
         var result = await GetBaseQuery(model)
@@ -294,6 +311,69 @@ public class WidgetDataService(AnalyticContext context)
             Datasets = [rangeData, ppmData, priceData, orderData]
         };
         return chartData;
+    }
+
+    public async Task<List<OperabilityOverviewModel>> GetOperabilityTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        return await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(g => new OperabilityOverviewModel
+            {
+                Date = g.Key,
+                OperableCount = g.Count(e => !e.HasInoperable),
+                InoperableCount = g.Count(e => e.HasInoperable)
+            }).ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<TrailerTypesOverviewModel>> GetTrailersTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        return await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(g => new TrailerTypesOverviewModel
+            {
+                Date = g.Key,
+                EnclosedCount = g.Count(e => e.TrailerType == TrailerTypes.Enclosed),
+                OpenCount = g.Count(e => e.TrailerType == TrailerTypes.Open),
+                DriveawayCount = g.Count(e => e.TrailerType == TrailerTypes.Driveaway)
+            }).ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<PaymentTypeOverviewModel>> GetPaymentsTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        return await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(s => new PaymentTypeOverviewModel
+            {
+                Date = s.Key,
+                CashCount = s.Count(e => e.PaymentType == PaymentTypes.Cash),
+                CheckCount = s.Count(e => e.PaymentType == PaymentTypes.Check),
+                CompanyCheckCount = s.Count(e => e.PaymentType == PaymentTypes.CompanyCheck),
+                ComcheckCount = s.Count(e => e.PaymentType == PaymentTypes.Comcheck),
+                TCHCount = s.Count(e => e.PaymentType == PaymentTypes.TCH),
+                ACHCount = s.Count(e => e.PaymentType == PaymentTypes.ACH),
+                SuperPayCount = s.Count(e => e.PaymentType == PaymentTypes.SuperPay),
+                ZelleCount = s.Count(e => e.PaymentType == PaymentTypes.Zelle),
+                UshipCount = s.Count(e => e.PaymentType == PaymentTypes.Uship),
+            }).ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<VehicleCountOverviewModel>> GetVehicleCountTrend(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        return await GetBaseQuery(model)
+            .GroupBy(g => g.CreatedDate.Date)
+            .Select(s => new VehicleCountOverviewModel
+            {
+                Date = s.Key,
+                One = s.Count(e => e.VehicleCount == 1),
+                Two = s.Count(e => e.VehicleCount == 2),
+                Three = s.Count(e => e.VehicleCount == 3),
+                Four = s.Count(e => e.VehicleCount == 4),
+                Five = s.Count(e => e.VehicleCount == 5),
+                Six = s.Count(e => e.VehicleCount == 6),
+                Seven = s.Count(e => e.VehicleCount == 7),
+                Eight = s.Count(e => e.VehicleCount == 8),
+                Nine = s.Count(e => e.VehicleCount == 9)
+            }).ToListAsync(cancellationToken);
     }
 
     public async Task<(DateTime startDate, DateTime endDate)> GetLowerAndUpperDates(CancellationToken cancellationToken)

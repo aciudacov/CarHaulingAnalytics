@@ -59,7 +59,7 @@
         {
             <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") - @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</b>
         }
-        <b>, @(FilterValue.SelectedState is null ? "No state selected" : FilterValue.SelectedState.Value.AsString()) </b>
+        <b>, <span style="color: red;">@(FilterValue.SelectedState is null ? "No state selected" : FilterValue.SelectedState.Value.AsString())</span> </b>
 
     </RadzenCard>
 </div>
@@ -132,12 +132,26 @@
     </RadzenRow>
     <RadzenRow class="mt-3">
         <RadzenColumn Size="6">
-            <div class="chart-container" id="priceCalendar">
-            </div>
+            <div class="chart-container" id="priceCalendar"></div>
         </RadzenColumn>
         <RadzenColumn Size="6">
-            <div class="chart-container" id="pricePerMileCalendar">
-            </div>
+            <div class="chart-container" id="pricePerMileCalendar"></div>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow class="mt-3">
+        <RadzenColumn Size="6">
+            <div class="chart-container" id="operabilityArea"></div>
+        </RadzenColumn>
+        <RadzenColumn Size="6">
+            <div class="chart-container" id="trailerTypeArea"></div>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow class="mt-2">
+        <RadzenColumn Size="6">
+            <div class="chart-container" id="paymentsTrend"></div>
+        </RadzenColumn>
+        <RadzenColumn Size="6">
+            <div class="chart-container" id="vehicleCountTrend"></div>
         </RadzenColumn>
     </RadzenRow>
 }
@@ -298,7 +312,7 @@
                 eventType,
                 function (e) {
                     let chart, point, i, event;
-                    for (i = 0; i < Highcharts.charts.length-2; i = i + 1) {
+                    for (i = 0; i < Highcharts.charts.length-4; i = i + 1) {
                         chart = Highcharts.charts[i];
                         event = chart.pointer.normalize(e);
                         point = chart.series[0].searchPoint(event, true);
@@ -356,8 +370,6 @@
             chartDiv.className = 'chart';
             document.getElementById(container).appendChild(chartDiv);
 
-            
-
             Highcharts.chart(chartDiv, {
                 chart: {
                     marginLeft: 40,
@@ -409,7 +421,7 @@
                         fontSize: '18px'
                     },
                     valueDecimals: dataset.valueDecimals,
-                    valueSuffix: ' ' + dataset.unit
+                    valueSuffix: ` ${dataset.unit}`
                 },
                 series: [{
                     data: dataset.data,
@@ -418,10 +430,58 @@
                     color: Highcharts.getOptions().colors[i],
                     fillOpacity: 0.3,
                     tooltip: {
-                        valueSuffix: ' ' + dataset.unit
+                        valueSuffix: ` ${dataset.unit}`
                     }
                 }]
             });
+        });
+    }
+
+    function renderComparisonChart(containerId, title, data) {
+        Highcharts.chart(containerId, {
+            chart: {
+                type: 'area'
+            },
+            title: {
+                text: title
+            },
+            accessibility: {
+                enabled: false
+            },
+            xAxis: {
+                type: 'datetime'
+            },
+            yAxis: {
+                labels: {
+                    format: '{value}%'
+                },
+                title: {
+                    enabled: false
+                }
+            },
+            tooltip: {
+                pointFormat: '<span style="color:{series.color}">{series.name}</span>' +
+                    ': <b>{point.percentage:.1f}%</b> ({point.y} orders)<br/>',
+                split: true
+            },
+            plotOptions: {
+                series: {
+                    pointStart: null
+                },
+                area: {
+                    stacking: 'percent',
+                    marker: {
+                        enabled: false
+                    }
+                }
+            },
+            series: data
+        });
+    }
+
+    function disposeCharts() {
+        Highcharts.charts.forEach(c => {
+            c.destroy();
         });
     }
 </script>

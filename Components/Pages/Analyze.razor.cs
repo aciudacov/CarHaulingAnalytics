@@ -9,7 +9,7 @@ using System.Globalization;
 
 namespace CarHaulingAnalytics.Components.Pages;
 
-public class AnalyzeRazor : LayoutComponentBase, IDisposable
+public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
 {
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
 
@@ -28,7 +28,7 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
 
     protected bool DatesLoaded { get; set; }
 
-    protected AnalyzeLoadingState Loading { get; set; } = new();
+    private AnalyzeLoadingState Loading { get; set; } = new();
 
     protected OverviewFilterModel FilterValue { get; set; } = new()
     {
@@ -69,6 +69,10 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
         await RenderSnapshotChart(model, cancellationToken);
         await RenderPriceCalendar(model, cancellationToken);
         await RenderPricePerMileCalendar(model, cancellationToken);
+        await RenderOperabilityOverview(model, cancellationToken);
+        await RenderTrailerTypesOverview(model, cancellationToken);
+        await RenderPaymentTypesOverview(model, cancellationToken);
+        await RenderVehicleCountOverview(model, cancellationToken);
     }
 
     private async Task RenderSnapshotChart(OverviewFilterModel model, CancellationToken cancellationToken)
@@ -105,6 +109,253 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
             average = t.Average
         }).ToArray();
         await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per mile by day");
+    }
+
+    private async Task RenderOperabilityOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var operabilityTrend = await DataService.GetOperabilityTrend(model, cancellationToken);
+        var operableArray = new OperabilityData
+        {
+            Name = "Operable",
+            Data = operabilityTrend.Select(o => new OperabilityPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.OperableCount
+            }).ToArray()
+        };
+        var inoperableArray = new OperabilityData
+        {
+            Name = "Inoperable",
+            Data = operabilityTrend.Select(o => new OperabilityPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.InoperableCount
+            }).ToArray()
+        };
+        var chartData = new[]
+        {
+            operableArray, inoperableArray
+        };
+        await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "operabilityArea", "Operability trend", chartData);
+    }
+
+    private async Task RenderTrailerTypesOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var trailersTrend = await DataService.GetTrailersTrend(model, cancellationToken);
+        var openArray = new TrailerTypesData
+        {
+            Name = "Open",
+            Data = trailersTrend.Select(o => new TrailerTypesPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.OpenCount
+            }).ToArray()
+        };
+        var enclosedArray = new TrailerTypesData
+        {
+            Name = "Enclosed",
+            Data = trailersTrend.Select(o => new TrailerTypesPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.EnclosedCount
+            }).ToArray()
+        };
+        var driveawayArray = new TrailerTypesData
+        {
+            Name = "Enclosed",
+            Data = trailersTrend.Select(o => new TrailerTypesPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.DriveawayCount
+            }).ToArray()
+        };
+        var chartData = new[]
+        {
+            openArray, enclosedArray, driveawayArray
+        };
+        await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "trailerTypeArea", "Trailer types trend", chartData);
+    }
+
+    private async Task RenderPaymentTypesOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var paymentsTrend = await DataService.GetPaymentsTrend(model, cancellationToken);
+        var cashArray = new PaymentTypeData
+        {
+            Name = "Cash",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.CashCount
+            }).ToArray()
+        };
+        var checkArray = new PaymentTypeData
+        {
+            Name = "Check",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.CheckCount
+            }).ToArray()
+        };
+        var companyCheckArray = new PaymentTypeData
+        {
+            Name = "Company check",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.CompanyCheckCount
+            }).ToArray()
+        };
+        var comCheckArray = new PaymentTypeData
+        {
+            Name = "Comchek",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.ComcheckCount
+            }).ToArray()
+        };
+        var tchArray = new PaymentTypeData
+        {
+            Name = "TCH",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.TCHCount
+            }).ToArray()
+        };
+        var achArray = new PaymentTypeData
+        {
+            Name = "ACH",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.ACHCount
+            }).ToArray()
+        };
+        var superPayArray = new PaymentTypeData
+        {
+            Name = "SuperPay",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.SuperPayCount
+            }).ToArray()
+        };
+        var zelleArray = new PaymentTypeData
+        {
+            Name = "Zelle",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.ZelleCount
+            }).ToArray()
+        };
+        var ushipArray = new PaymentTypeData
+        {
+            Name = "Uship",
+            Data = paymentsTrend.Select(o => new PaymentTypePair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.UshipCount
+            }).ToArray()
+        };
+        var chartData = new[]
+        {
+            cashArray, checkArray, companyCheckArray, comCheckArray, tchArray, achArray, superPayArray, zelleArray, ushipArray
+        };
+        await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "paymentsTrend", "Payment types trend", chartData);
+    }
+
+    private async Task RenderVehicleCountOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    {
+        var paymentsTrend = await DataService.GetVehicleCountTrend(model, cancellationToken);
+        var oneArray = new VehicleCountData
+        {
+            Name = "1 vehicle",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.One
+            }).ToArray()
+        };
+        var twoArray = new VehicleCountData
+        {
+            Name = "2 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Two
+            }).ToArray()
+        };
+        var threeArray = new VehicleCountData
+        {
+            Name = "3 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Three
+            }).ToArray()
+        };
+        var fourArray = new VehicleCountData
+        {
+            Name = "4 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Four
+            }).ToArray()
+        };
+        var fiveArray = new VehicleCountData
+        {
+            Name = "5 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Five
+            }).ToArray()
+        };
+        var sixArray = new VehicleCountData
+        {
+            Name = "6 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Six
+            }).ToArray()
+        };
+        var sevenArray = new VehicleCountData
+        {
+            Name = "7 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Seven
+            }).ToArray()
+        };
+        var eightArray = new VehicleCountData
+        {
+            Name = "8 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Eight
+            }).ToArray()
+        };
+        var nineArray = new VehicleCountData
+        {
+            Name = "9 vehicles",
+            Data = paymentsTrend.Select(o => new VehicleCountPair
+            {
+                X = ((DateTimeOffset)o.Date).ToUnixTimeMilliseconds(),
+                Y = o.Nine
+            }).ToArray()
+        };
+        var chartData = new[]
+        {
+            oneArray, twoArray, threeArray, fourArray, fiveArray, sixArray, sevenArray, eightArray, nineArray
+        };
+        await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "vehicleCountTrend", "Vehicle count trend", chartData);
     }
 
     protected async Task FilterChanged()
@@ -169,9 +420,12 @@ public class AnalyzeRazor : LayoutComponentBase, IDisposable
         await LoadWidgetData(FilterValue, CancellationTokenSource.Token);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        CancellationTokenSource.Cancel();
+        await JsRuntime.InvokeVoidAsync("disposeCharts");
+        await CancellationTokenSource.CancelAsync();
         CancellationTokenSource.Dispose();
+        Button.Dispose();
+        Popup.Dispose();
     }
 }

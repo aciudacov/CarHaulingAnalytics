@@ -1,0 +1,160 @@
+﻿@using CarHaulingAnalytics.Data.Enums
+@using EnumsNET
+@using Radzen.Blazor.Rendering
+@inherits CompareRazor
+
+@page "/compare"
+
+<div class="ontop">
+    <RadzenCard>
+        <RadzenButton @ref="Button" Icon="filter_alt" Text="Filters" Click="@(_ => Popup.ToggleAsync(Button.Element))" />
+        <b>Displaying orders: $@FilterValue.LowerPriceLimit - $@FilterValue.UpperPriceLimit, @FilterValue.LowerRangeLimit mi - @FilterValue.UpperRangeLimit mi</b>
+        @if (FilterValue.TrailerType.HasValue)
+        {
+            <b>, @FilterValue.TrailerType.Value.AsString() trailer</b>
+        }
+        @if (FilterValue is { FromDate: not null, ToDate: not null })
+        {
+            <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") - @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</b>
+        }
+        <b>, Compare X with Y ? @(FilterValue.SelectedState is null ? "No state selected" : FilterValue.SelectedState.Value.AsString()) </b>
+
+    </RadzenCard>
+</div>
+
+<Popup @ref="Popup" Lazy="true" Style="display:none;position:absolute;height:300px;width:50vw;padding:5px;">
+    <RadzenCard>
+        @if (!FilterValue.FromDate.HasValue || !FilterValue.ToDate.HasValue)
+        {
+            <h5>@TotalOrders orders (last updated at @DatePickerDates.endDate UTC)</h5>
+        }
+        else
+        {
+            <h5>@TotalOrders orders from @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") to @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</h5>
+        }
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="3">
+                <h4>From date</h4>
+                <RadzenDatePicker @bind-Value="@FilterValue.FromDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" AllowInput="false" Placeholder="All dates" />
+            </RadzenColumn>
+            <RadzenColumn Size="3">
+                <h4>To date</h4>
+                <RadzenDatePicker @bind-Value="@FilterValue.ToDate" Min="@DatePickerDates.startDate" Max="@DatePickerDates.endDate" AllowClear="true" DateFormat="dd/MM/yyyy" AllowInput="false" Placeholder="All dates" />
+            </RadzenColumn>
+            <RadzenColumn Size="4">
+                <h4>Platform filter</h4>
+                <RadzenDropDown TValue="List<SourcePlatform>" @bind-Value="@FilterValue.SelectedPlatforms" Data="@(Enum.GetValues<SourcePlatform>())" Multiple="true" Chips="true" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Price filter (from $@FilterValue.LowerPriceLimit to $@FilterValue.UpperPriceLimit)</h4>
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@FilterValue.LowerPriceLimit" />
+                <RadzenNumeric Min="300" Max="7000" @bind-Value="@FilterValue.UpperPriceLimit" />
+            </RadzenColumn>
+
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Range filter (from @FilterValue.LowerRangeLimit mi to @FilterValue.UpperRangeLimit mi)</h4>
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@FilterValue.LowerRangeLimit" />
+                <RadzenNumeric Min="0" Max="5000" @bind-Value="@FilterValue.UpperRangeLimit" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
+            <RadzenRow>
+                <RadzenColumn>
+                    <h4>Trailer type filter</h4>
+                    <RadzenDropDown TValue="TrailerTypes?" @bind-Value="@FilterValue.TrailerType" Data="@(Enum.GetValues<TrailerTypes>())" AllowClear="true" Placeholder="Any trailer" />
+                </RadzenColumn>
+                <RadzenColumn>
+                    <h4>Compare this:</h4>
+                    <RadzenDropDown TValue="States?" @bind-Value="@FilterValue.SelectedState" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                </RadzenColumn>
+                <RadzenColumn>
+                    <h4>To this:</h4>
+                    <RadzenDropDown TValue="States?" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                    <RadzenCheckBox TValue="bool">Rest of the states</RadzenCheckBox>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenRow>
+        <RadzenRow>
+            <RadzenColumn Size="5">
+                <RadzenButton Text="Apply filter" Click="FilterChanged" IsBusy="!DatesLoaded" />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+</Popup>
+
+<PageTitle>Compare data</PageTitle>
+
+<RadzenRow>
+    <RadzenColumn Size="6">
+
+    </RadzenColumn>
+    <RadzenColumn Size="6">
+
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow>
+    <RadzenColumn Size="6">
+
+    </RadzenColumn>
+    <RadzenColumn Size="6">
+
+    </RadzenColumn>
+</RadzenRow>
+
+<script>
+    function renderComparisonChart(containerId, title, data) {
+        Highcharts.chart(containerId, {
+            chart: {
+                type: 'area'
+            },
+            accessibility: {
+                enabled: false,
+            },
+            title: {
+                text: title
+            },
+            xAxis: {
+                type: 'datetime'
+            },
+            tooltip: {
+                pointFormat: '{series.name} had stockpiled <b>{point.y:,.0f}</b><br/>' +
+                    'warheads in {point.x:%Y-%m-%d}'
+            },
+            plotOptions: {
+                area: {
+                    marker: {
+                        enabled: false,
+                        symbol: 'circle',
+                        radius: 2,
+                        states: {
+                            hover: {
+                                enabled: true
+                            }
+                        }
+                    }
+                }
+            },
+            series: [{
+                name: 'USA',
+                data: [
+                    [new Date('1945-01-01').getTime(), 2],
+                    [new Date('1950-01-01').getTime(), 9],
+                    [new Date('1955-01-01').getTime(), 13],
+                    [new Date('1960-01-01').getTime(), 50]
+                ]
+            }, {
+                name: 'USSR/Russia',
+                data: [
+                    [new Date('1945-01-01').getTime(), 1],
+                    [new Date('1950-01-01').getTime(), 5],
+                    [new Date('1955-01-01').getTime(), 25],
+                    [new Date('1960-01-01').getTime(), 50]
+                ]
+            }]
+        });
+    }
+</script>

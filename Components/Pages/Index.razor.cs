@@ -8,7 +8,7 @@ using Radzen.Blazor;
 
 namespace CarHaulingAnalytics.Components.Pages;
 
-public class IndexRazor : LayoutComponentBase, IDisposable
+public class IndexRazor : LayoutComponentBase, IAsyncDisposable
 {
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
 
@@ -104,6 +104,7 @@ public class IndexRazor : LayoutComponentBase, IDisposable
         await RenderPaymentTypes(model, cancellationToken);
         await RenderVehicleStatus(model, cancellationToken);
         await RenderTrailerType(model, cancellationToken);
+        await RenderVehicleCount(model, cancellationToken);
     }
 
     private async Task RenderHoneycombPickup(OverviewFilterModel model, CancellationToken cancellationToken)
@@ -264,9 +265,28 @@ public class IndexRazor : LayoutComponentBase, IDisposable
             "Orders by trailer type");
     }
 
-    public void Dispose()
+    private async Task RenderVehicleCount(OverviewFilterModel model, CancellationToken cancellationToken)
     {
-        CancellationTokenSource.Cancel();
+        Loading.VehicleCountLoading = true;
+        await InvokeAsync(StateHasChanged);
+        var paymentTypes = await DataService.GetVehicleCounts(model, cancellationToken);
+        Loading.VehicleCountLoading = false;
+        await InvokeAsync(StateHasChanged);
+        var paymentArray = paymentTypes.Select(p => new
+        {
+            name = p.Value,
+            y = p.Count
+        }).ToArray();
+        await JsRuntime.InvokeVoidAsync("renderDonutChart", cancellationToken, "vehicleCountBreakdown", paymentArray,
+            "Orders by vehicle count");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await JsRuntime.InvokeVoidAsync("disposeCharts");
+        await CancellationTokenSource.CancelAsync();
         CancellationTokenSource.Dispose();
+        Button.Dispose();
+        Popup.Dispose();
     }
 }
