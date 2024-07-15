@@ -5,6 +5,7 @@ using CarHaulingAnalytics.Data.Models;
 using Radzen;
 using Radzen.Blazor.Rendering;
 using Radzen.Blazor;
+using CarHaulingAnalytics.Data.Models.FilterModels;
 
 namespace CarHaulingAnalytics.Components.Pages;
 

@@ -3,11 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CarHaulingAnalytics.Data.Context;
 
-public class AnalyticContext : DbContext
+public class AnalyticContext(DbContextOptions<AnalyticContext> options) : DbContext(options)
 {
     public DbSet<LoadboardOrder> Orders { get; set; }
-
-    public AnalyticContext(DbContextOptions<AnalyticContext> options) : base(options)
-    {
-    }
 }

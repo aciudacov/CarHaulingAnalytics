@@ -1,4 +1,4 @@
-﻿namespace CarHaulingAnalytics.Data.Models;
+﻿namespace CarHaulingAnalytics.Data.Models.Charts.ComplexData;
 
 public class TrailerTypesOverviewModel
 {

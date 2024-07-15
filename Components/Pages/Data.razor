@@ -1,0 +1,36 @@
+﻿@using CarHaulingAnalytics.Data.Models
+@inherits DataRazor
+
+@page "/data"
+
+<PageTitle>View data</PageTitle>
+
+<p>For demonstration purposes only. Loading times may be slow or break the app. Use at your own risk.</p>
+
+<RadzenDataGrid TItem="LoadboardOrder" Data="Orders" AllowFiltering="true" AllowSorting="true" AllowColumnResize="true" PageSize="25"
+                AllowPaging="true" PagerPosition="PagerPosition.TopAndBottom" PageSizeOptions="[25, 50, 100, 200, 500]" ShowPagingSummary="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="PickupState" Title="Pickup" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="DeliveryState" Title="Delivery" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="Price" Title="Price">
+            <Template Context="order">
+                $@order.Price
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="PricePerMile" Title="Per mile">
+            <Template Context="order">
+                $@order.PricePerMile
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="Distance" Title="Distance">
+            <Template Context="order">
+                @order.Distance mi
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="VehicleCount" Title="Vehicles" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="HasInoperable" Title="Inoperable" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="TrailerType" Title="Trailer type" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="PaymentType" Title="Payment" />
+        <RadzenDataGridColumn TItem="LoadboardOrder" Property="SourcePlatform" Title="Source" />
+    </Columns>
+</RadzenDataGrid>

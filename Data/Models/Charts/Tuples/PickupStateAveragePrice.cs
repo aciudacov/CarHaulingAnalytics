@@ -1,4 +1,4 @@
-﻿namespace CarHaulingAnalytics.Data.Models.Widgets;
+﻿namespace CarHaulingAnalytics.Data.Models.Widgets.Tuples;
 
 public class PickupStateAveragePrice
 {

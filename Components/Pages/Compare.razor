@@ -5,6 +5,20 @@
 
 @page "/compare"
 
+<style>
+    .chart-container {
+        height: 35vw;
+        margin: 0 auto;
+        border-radius: 10px;
+        -webkit-box-shadow: 0 0 5px 0 #000000;
+        -webkit-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        -moz-box-shadow: 0 0 5px 0 #000000;
+        -moz-box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+        box-shadow: 0 0 5px 0 #000000;
+        box-shadow: 0 0 5px 0 rgba(0,0,0,0.5);
+    }
+</style>
+
 <div class="ontop">
     <RadzenCard>
         <RadzenButton @ref="Button" Icon="filter_alt" Text="Filters" Click="@(_ => Popup.ToggleAsync(Button.Element))" />
@@ -17,7 +31,7 @@
         {
             <b>, @FilterValue.FromDate.Value.ToString("dd/MM/yyyy") - @FilterValue.ToDate.Value.ToString("dd/MM/yyyy")</b>
         }
-        <b>, Compare X with Y ? @(FilterValue.SelectedState is null ? "No state selected" : FilterValue.SelectedState.Value.AsString()) </b>
+        <b>, <span style="color: red;">Compare @(FilterValue.This.HasValue ? FilterValue.This.Value : "nothing") to @(FilterValue.Rest ? "the rest" : (FilterValue.That.HasValue ? FilterValue.That.Value : "nothing"))</span> </b>
 
     </RadzenCard>
 </div>
@@ -62,6 +76,13 @@
             </RadzenColumn>
         </RadzenRow>
         <RadzenRow Class="mb-3">
+            <RadzenColumn Size="12">
+                <h4>Vehicle amount filter (from @FilterValue.MinVehicles to @FilterValue.MaxVehicles)</h4>
+                <RadzenNumeric Min="1" Max="10" @bind-Value="@FilterValue.MinVehicles" />
+                <RadzenNumeric Min="1" Max="10" @bind-Value="@FilterValue.MaxVehicles" />
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow Class="mb-3">
             <RadzenRow>
                 <RadzenColumn>
                     <h4>Trailer type filter</h4>
@@ -69,12 +90,13 @@
                 </RadzenColumn>
                 <RadzenColumn>
                     <h4>Compare this:</h4>
-                    <RadzenDropDown TValue="States?" @bind-Value="@FilterValue.SelectedState" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+                    <RadzenDropDown TValue="States?" @bind-Value="@FilterValue.This" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
                 </RadzenColumn>
                 <RadzenColumn>
                     <h4>To this:</h4>
-                    <RadzenDropDown TValue="States?" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
-                    <RadzenCheckBox TValue="bool">Rest of the states</RadzenCheckBox>
+                    <RadzenDropDown TValue="States?" @bind-Value="@FilterValue.That" Data="@(Enum.GetValues<States>().Where(s => s != States.Canada))" AllowClear="true" Chips="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" Disabled="FilterValue.Rest" />
+                    <RadzenLabel Text="Rest of the states" Component="RestCheck" />
+                    <RadzenCheckBox TValue="bool" @bind-Value="@FilterValue.Rest" Name="RestCheck" />
                 </RadzenColumn>
             </RadzenRow>
         </RadzenRow>
@@ -88,25 +110,25 @@
 
 <PageTitle>Compare data</PageTitle>
 
-<RadzenRow>
+<RadzenRow class="mt-3">
     <RadzenColumn Size="6">
-
+        <div id="compareCount" class="chart-container"></div>
     </RadzenColumn>
     <RadzenColumn Size="6">
-
+        <div id="comparePrice" class="chart-container"></div>
     </RadzenColumn>
 </RadzenRow>
-<RadzenRow>
+<RadzenRow class="mt-3">
     <RadzenColumn Size="6">
-
+        <div id="comparePpm" class="chart-container"></div>
     </RadzenColumn>
     <RadzenColumn Size="6">
-
+        <div id="compareRange" class="chart-container"></div>
     </RadzenColumn>
 </RadzenRow>
 
 <script>
-    function renderComparisonChart(containerId, title, data) {
+    function renderComparisonChart(containerId, data, title, floatingPoints, unit) {
         Highcharts.chart(containerId, {
             chart: {
                 type: 'area'
@@ -120,9 +142,13 @@
             xAxis: {
                 type: 'datetime'
             },
+            yAxis: {
+                title : {
+                    text: null
+                }
+            },
             tooltip: {
-                pointFormat: '{series.name} had stockpiled <b>{point.y:,.0f}</b><br/>' +
-                    'warheads in {point.x:%Y-%m-%d}'
+                pointFormat: '{series.name} - <b>{point.y:,.' + floatingPoints + 'f} ' + unit +'</b>'
             },
             plotOptions: {
                 area: {
@@ -138,23 +164,15 @@
                     }
                 }
             },
-            series: [{
-                name: 'USA',
-                data: [
-                    [new Date('1945-01-01').getTime(), 2],
-                    [new Date('1950-01-01').getTime(), 9],
-                    [new Date('1955-01-01').getTime(), 13],
-                    [new Date('1960-01-01').getTime(), 50]
-                ]
-            }, {
-                name: 'USSR/Russia',
-                data: [
-                    [new Date('1945-01-01').getTime(), 1],
-                    [new Date('1950-01-01').getTime(), 5],
-                    [new Date('1955-01-01').getTime(), 25],
-                    [new Date('1960-01-01').getTime(), 50]
-                ]
-            }]
+            series: data
+        });
+    }
+
+    function disposeCharts() {
+        Highcharts.charts.forEach(c => {
+            if (c) {
+                c.destroy();
+            }
         });
     }
 </script>

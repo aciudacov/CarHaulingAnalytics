@@ -6,6 +6,8 @@ using Radzen;
 using Radzen.Blazor.Rendering;
 using Radzen.Blazor;
 using System.Globalization;
+using CarHaulingAnalytics.Data.Models.Charts.ComplexData;
+using CarHaulingAnalytics.Data.Models.FilterModels;
 
 namespace CarHaulingAnalytics.Components.Pages;
 
@@ -30,11 +32,10 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
 
     private AnalyzeLoadingState Loading { get; set; } = new();
 
-    protected OverviewFilterModel FilterValue { get; set; } = new()
+    protected AnalyzeFilterModel FilterValue { get; set; } = new()
     {
         FromDate = DateTime.UtcNow.AddDays(-7),
-        ToDate = DateTime.UtcNow,
-        ExcludedStates = []
+        ToDate = DateTime.UtcNow
     };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -62,7 +63,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    private async Task LoadWidgetData(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task LoadWidgetData(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         DatePickerDates = await DataService.GetLowerAndUpperDates(CancellationTokenSource.Token);
         TotalOrders = await DataService.GetOrderCount(model, cancellationToken);
@@ -75,13 +76,13 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await RenderVehicleCountOverview(model, cancellationToken);
     }
 
-    private async Task RenderSnapshotChart(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderSnapshotChart(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         var result = await DataService.GetMainTrendData(model, cancellationToken);
         await JsRuntime.InvokeVoidAsync("renderLinkedCharts", cancellationToken, "snapshotChart", result);
     }
 
-    private async Task RenderPriceCalendar(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderPriceCalendar(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         Loading.PriceCalendarLoading = true;
         await InvokeAsync(StateHasChanged);
@@ -96,7 +97,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "priceCalendar", pricesCalendar, "Average prices by day");
     }
 
-    private async Task RenderPricePerMileCalendar(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderPricePerMileCalendar(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         Loading.PricePerMileCalendarLoading = true;
         await InvokeAsync(StateHasChanged);
@@ -111,7 +112,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await JsRuntime.InvokeVoidAsync("renderCalendarChart", cancellationToken, "pricePerMileCalendar", pricesCalendar, "Average prices per mile by day");
     }
 
-    private async Task RenderOperabilityOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderOperabilityOverview(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         var operabilityTrend = await DataService.GetOperabilityTrend(model, cancellationToken);
         var operableArray = new OperabilityData
@@ -139,7 +140,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "operabilityArea", "Operability trend", chartData);
     }
 
-    private async Task RenderTrailerTypesOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderTrailerTypesOverview(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         var trailersTrend = await DataService.GetTrailersTrend(model, cancellationToken);
         var openArray = new TrailerTypesData
@@ -176,7 +177,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "trailerTypeArea", "Trailer types trend", chartData);
     }
 
-    private async Task RenderPaymentTypesOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderPaymentTypesOverview(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         var paymentsTrend = await DataService.GetPaymentsTrend(model, cancellationToken);
         var cashArray = new PaymentTypeData
@@ -267,7 +268,7 @@ public class AnalyzeRazor : LayoutComponentBase, IAsyncDisposable
         await JsRuntime.InvokeVoidAsync("renderComparisonChart", cancellationToken, "paymentsTrend", "Payment types trend", chartData);
     }
 
-    private async Task RenderVehicleCountOverview(OverviewFilterModel model, CancellationToken cancellationToken)
+    private async Task RenderVehicleCountOverview(AnalyzeFilterModel model, CancellationToken cancellationToken)
     {
         var paymentsTrend = await DataService.GetVehicleCountTrend(model, cancellationToken);
         var oneArray = new VehicleCountData
